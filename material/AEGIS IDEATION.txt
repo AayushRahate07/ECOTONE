@@ -1,0 +1,1002 @@
+Saga ID
+Correlation ID
+Event ID
+Idempotency Table
+Project State Machine
+
+
+The Biggest Thing You Accidentally Solved
+
+Most student Kafka projects suffer from:
+
+Technology First
+↓
+Domain Later
+
+Example:
+
+"Let's use Kafka."
+
+Then:
+
+"Uh... maybe for food delivery?"
+
+Then:
+
+"And blockchain."
+
+Then civilization collapses.
+
+Your conservation workflow flips this:
+
+Domain Pain
+↓
+Architecture Necessity
+
+The distinction is huge.
+
+What Makes This Better Than Fintech
+
+A fintech interviewer already knows:
+
+Payment
+Wallet
+Transfer
+
+They've seen it 500 times.
+
+The conversation becomes:
+
+Why Kafka?
+
+Why Saga?
+
+Why Redis?
+
+With this project:
+
+Why Kafka?
+
+Because permits can take weeks.
+
+That's a domain-driven answer.
+
+Not a textbook answer.
+
+Where I Would Push It Further
+Replace "Permit Service"
+
+with
+
+Regulatory Gateway
+
+This becomes much richer.
+
+Now you can model:
+
+Forest Clearance
+Archaeological Clearance
+Environmental Clearance
+Drone Flight Permission
+Satellite Imaging Approval
+
+Each approval can:
+
+APPROVED
+REJECTED
+EXPIRED
+REQUIRES_REVISION
+
+Now your Saga becomes genuinely complex.
+
+The Resource Service Is Gold
+
+This is honestly the strongest part.
+
+Because you now have:
+
+Exclusive Resources
+
+Examples:
+
+LiDAR Drone #7
+
+Portable DNA Sequencer #3
+
+Ground Radar Unit #2
+
+These are scarce.
+
+This creates real consistency requirements.
+
+You can even implement:
+
+Soft Reservation
+↓
+Hard Reservation
+↓
+Deployment
+↓
+Release
+
+Exactly the kind of thing distributed systems are built for.
+
+Where Redis Actually Becomes Legitimate
+
+Most student projects:
+
+Redis because Redis.
+
+Very scientific.
+
+Here:
+
+Equipment Availability Dashboard
+
+Permit Status Dashboard
+
+Project Progress Dashboard
+
+District Analytics Dashboard
+
+Suddenly Redis has a purpose.
+
+Event Sourcing Is The Sneaky Upgrade
+
+This is where I'd actually spend effort.
+
+Imagine:
+
+ProjectCreated
+
+FundsReserved
+
+PermitRequested
+
+PermitApproved
+
+EquipmentAssigned
+
+FieldSurveyStarted
+
+FieldSurveyCompleted
+
+ProjectClosed
+
+Stored as events.
+
+Now you can replay history.
+
+Auditors love this.
+
+Researchers love this.
+
+Interviewers definitely love this.
+
+What Interviewers Will Ask
+
+If I were interviewing you:
+
+First 10 minutes:
+
+What's eDNA?
+
+Then:
+
+Why Saga over 2PC?
+
+Then:
+
+Permit approved after 15 days.
+How do you keep workflow state?
+
+Then:
+
+Kafka down?
+
+Then:
+
+Outbox pattern?
+
+That's a beautiful interview.
+
+Because they're discussing engineering.
+
+Not arguing about why your food delivery clone needed 17 microservices.
+
+My Only Major Warning
+
+Do NOT build:
+
+10 microservices
+Kafka
+Redis
+CQRS
+Event Sourcing
+Grafana
+Prometheus
+Kubernetes
+Terraform
+
+for Version 1.
+
+That's how students spend 8 months debugging YAML instead of building software.
+
+Build:
+
+Project Service
+Resource Service
+Regulatory Service
+Funding Service
+
+4 services.
+
+PostgreSQL.
+
+Kafka.
+
+Outbox.
+
+Saga.
+
+Done.
+
+Then add Redis.
+
+Then maybe Event Sourcing.
+
+Then maybe CQRS.
+
+Project: Aegis-Eco
+Event-Driven Resource Orchestration Platform for Conservation, Heritage & Scientific Field Projects
+
+Forget the fancy name for now.
+
+The actual problem is:
+
+How do you coordinate funding, permits, experts, laboratories, drones, field equipment, and survey teams across long-running government and scientific projects while handling failures gracefully?
+
+That is a genuinely difficult distributed systems problem.
+
+The Story
+
+Suppose a project is started:
+
+Western Ghats eDNA Biodiversity Survey
+
+Requirements:
+
+Funding allocation
+Forest department permission
+Drone approval
+Lab assignment
+Field team assignment
+Equipment reservation
+
+Before field work begins.
+
+If any requirement fails:
+
+Permit Rejected
+
+then:
+
+Release Funding
+Release Equipment
+Release Team
+Cancel Lab Booking
+
+This becomes your Saga.
+
+Core Idea
+
+Instead of:
+
+Project Management Software
+
+You're building:
+
+Distributed Resource Orchestration Engine
+
+Think:
+
+National Parks
+ASI heritage restoration
+Wetland conservation
+Biodiversity surveys
+eDNA studies
+Satellite mapping projects
+High-Level Architecture
+                ┌───────────────┐
+                │ Project API   │
+                └───────┬───────┘
+                        │
+                        ▼
+                 Create Project
+                        │
+                        ▼
+                    Kafka
+                        │
+ ┌─────────────┬────────┼──────────┬────────────┐
+ ▼             ▼        ▼          ▼            ▼
+
+Funding    Resource  Regulatory  Team      Analytics
+Service    Service    Service    Service    Service
+
+                        │
+                        ▼
+                    PostgreSQL
+Services
+1. Project Service
+
+Brain of the system.
+
+Stores:
+
+Projects
+
+Fields:
+
+project_id
+title
+description
+status
+created_at
+
+Status:
+
+DRAFT
+
+PENDING_RESOURCES
+
+PENDING_PERMITS
+
+ACTIVE
+
+COMPLETED
+
+CANCELLED
+Responsibilities
+
+Creates project.
+
+Starts Saga.
+
+Publishes:
+
+ProjectCreated
+
+event.
+
+2. Resource Service
+
+Most important service.
+
+Handles:
+
+Drones
+GPS Devices
+Sequencers
+Excavation Machines
+Survey Equipment
+Vehicles
+Tables
+resources
+resource_id
+name
+type
+status
+reservations
+reservation_id
+project_id
+resource_id
+status
+Saga Action
+
+Consumes:
+
+ProjectCreated
+
+Produces:
+
+ResourceReserved
+
+or
+
+ResourceUnavailable
+3. Regulatory Service
+
+Handles permissions.
+
+Examples:
+
+Forest Clearance
+
+Drone Flight Permission
+
+Archaeological Permit
+
+Environmental Clearance
+States
+PENDING
+
+APPROVED
+
+REJECTED
+Why Kafka?
+
+Because permit approval can take:
+
+5 minutes
+
+5 days
+
+5 weeks
+
+Your system cannot keep database transactions open.
+
+This is where event-driven systems shine.
+
+4. Funding Service
+
+Tracks grants.
+
+Tables:
+
+budgets
+grant_id
+project_id
+amount
+reserved
+spent
+
+Consumes:
+
+ProjectCreated
+
+Produces:
+
+FundsReserved
+
+Compensation:
+
+FundsReleased
+5. Team Service
+
+Tracks:
+
+Researchers
+
+Conservation Experts
+
+Archaeologists
+
+Field Staff
+
+Consumes:
+
+ProjectCreated
+
+Produces:
+
+TeamAssigned
+6. Analytics Service
+
+Read-only service.
+
+Consumes all events.
+
+Creates dashboards.
+
+Examples:
+
+Active Projects
+
+Equipment Utilization
+
+Funding Usage
+
+Permit Delays
+Saga Flow
+Successful Case
+ProjectCreated
+
+↓
+
+FundsReserved
+
+↓
+
+ResourcesReserved
+
+↓
+
+TeamAssigned
+
+↓
+
+PermitRequested
+
+↓
+
+PermitApproved
+
+↓
+
+ProjectActivated
+Failure Case
+ProjectCreated
+
+↓
+
+FundsReserved
+
+↓
+
+ResourcesReserved
+
+↓
+
+PermitRejected
+
+Now compensation begins:
+
+PermitRejected
+
+↓
+
+ReleaseResources
+
+↓
+
+ReleaseFunds
+
+↓
+
+UnassignTeam
+
+↓
+
+ProjectCancelled
+
+This is the centerpiece of your demo.
+
+Outbox Pattern
+
+Every service gets:
+
+outbox
+
+table.
+
+Example:
+
+outbox
+event_id
+event_type
+payload
+status
+created_at
+
+Instead of:
+
+Update DB
+Send Kafka Event
+
+(which can fail)
+
+you do:
+
+Update DB
+Insert Outbox Event
+Commit
+
+Then:
+
+Outbox Worker
+↓
+Kafka
+
+Guaranteed consistency.
+
+PostgreSQL
+
+One database per service.
+
+Example:
+
+project_db
+
+resource_db
+
+funding_db
+
+regulatory_db
+
+team_db
+
+Never share databases.
+
+That's the whole point of microservices.
+
+Redis
+
+Use for:
+
+Dashboard Cache
+Active Projects
+
+Available Resources
+
+Funding Statistics
+Fast Queries
+
+Example:
+
+Drone Availability
+
+without touching PostgreSQL.
+
+Kafka Topics
+project-created
+
+funds-reserved
+
+resource-reserved
+
+team-assigned
+
+permit-requested
+
+permit-approved
+
+permit-rejected
+
+project-cancelled
+C++ Tech Stack
+Backend
+Framework
+
+Drogon Framework
+
+Reason:
+
+Modern C++
+Async
+PostgreSQL support
+Production grade
+Messaging
+
+Apache Kafka
+
+Use:
+
+librdkafka
+
+for C++.
+
+Database
+
+PostgreSQL
+
+Cache
+
+Redis
+
+Containerization
+
+Docker
+
+Docker Compose initially.
+
+Folder Structure
+AegisEco/
+
+project-service/
+resource-service/
+funding-service/
+team-service/
+regulatory-service/
+
+shared/
+
+docker-compose.yml
+
+docs/
+Version 1 (Build This)
+
+Build only:
+
+Project Service
+
+Resource Service
+
+Funding Service
+
+Regulatory Service
+
+Features:
+
+Saga
+Kafka
+PostgreSQL
+Outbox
+
+No Redis.
+
+No CQRS.
+
+No Kubernetes.
+
+No Event Sourcing.
+
+Version 2
+
+Add:
+
+Redis
+
+Analytics Service
+
+Dashboard
+Version 3
+
+Add:
+
+Event Sourcing
+
+CQRS
+
+Replay Engine
+
+Project Timeline Reconstruction
+
+any current solution?? compare and contrast also see this One Twist That Makes It Even Stronger Add GIS awareness. You already like GIS. Resource allocation becomes: Drone #3 available in Pune Project located in Satara Transport Time = 4 hours Reserve Resource Now your engine isn't merely tracking resources. It's optimizing deployment decisions. Suddenly: PostgreSQL + PostGIS Kafka Saga Redis becomes very justifiable. And now you're sitting at the intersection of: Distributed Systems GIS Resource Scheduling Conservation Tech That's a much rarer combination than another fintech clone. A recruiter may have seen 200 payment apps. They've probably seen exactly zero students discussing Saga compensation for a drone reservation that got invalidated because an environmental permit was rejected three days later. That tends to be memorable.
+
+This is where the idea starts moving from "cool student project" to "something that could plausibly exist."
+
+First, let's answer the uncomfortable question:
+
+Does something like this already exist?
+Yes and No.
+
+Pieces exist.
+
+Nobody really combines them the way you're proposing.
+
+Existing Solutions
+Conservation / Biodiversity
+
+Examples:
+
+Global Biodiversity Information Facility (GBIF)
+iNaturalist
+World Wildlife Fund internal systems
+
+They focus on:
+
+Species records
+Observations
+Research data
+
+Not resource orchestration.
+
+GIS Platforms
+
+Examples:
+
+Esri
+QGIS
+
+They excel at:
+
+Maps
+Spatial analysis
+Layers
+Routing
+
+Not distributed workflow management.
+
+Project Management
+
+Examples:
+
+Jira
+Microsoft Project
+
+Good at:
+
+Tasks
+Teams
+Schedules
+
+Bad at:
+
+Permits
+Equipment reservations
+GIS optimization
+Asset Management
+
+Examples:
+
+IBM Maximo
+SAP EAM
+
+Good at:
+
+Asset tracking
+Maintenance
+Scheduling
+
+Extremely enterprise.
+
+Extremely expensive.
+
+Usually painful enough to qualify as a minor natural disaster.
+
+What Makes Yours Different?
+
+The interesting part is:
+
+GIS
++
+Resource Allocation
++
+Long-running Saga Workflows
++
+Conservation Domain
+
+That combination is unusual.
+
+The GIS Twist Is Actually Huge
+
+Without GIS:
+
+Drone Available
+
+Cool.
+
+With GIS:
+
+Drone Available
+
+Location:
+Pune
+
+Project:
+Satara
+
+Distance:
+110 km
+
+Travel Time:
+4 hrs
+
+Battery Capacity:
+Suitable
+
+Reserve
+
+Now you're making decisions.
+
+Not just recording them.
+
+Suddenly PostGIS Makes Sense
+
+Without GIS:
+
+PostgreSQL
+
+is enough.
+
+With GIS:
+
+Use:
+
+PostGIS
+
+Example table:
+
+resources
+---------
+resource_id
+name
+current_location GEOGRAPHY
+
+Project:
+
+projects
+---------
+project_id
+site_location GEOGRAPHY
+
+Now:
+
+Find nearest available drone
+within 150km
+
+becomes a real query.
+
+Where Redis Fits
+
+Imagine dashboards:
+
+Available Drones by District
+
+Available Survey Teams
+
+Active Projects
+
+Equipment Heatmap
+
+These are read-heavy.
+
+Redis becomes very reasonable.
+
+Where Saga Gets More Interesting
+
+Original Saga:
+
+Reserve Resource
+Reserve Funding
+Approve Permit
+
+GIS-aware Saga:
+
+Reserve Nearest Drone
+
+Reserve Vehicle
+
+Reserve Field Team
+
+Reserve Budget
+
+Request Permit
+
+Permit rejected after 3 days:
+
+Release Drone
+Release Vehicle
+Release Team
+Release Budget
+
+Now compensation actually matters.
+
+What Interviewers Will Remember
+
+Most projects:
+
+Food Delivery App
+
+Discussion:
+
+Orders
+Payments
+Users
+
+Interviewer has seen it 400 times.
+
+Your project:
+
+Spatially-Aware Conservation Resource Orchestration Platform
+
+Discussion:
+
+PostGIS
+Kafka
+Saga
+Resource Scheduling
+Permit Workflows
+Spatial Queries
+
+Now the conversation becomes:
+
+Why GIS?
+
+How did you choose nearest equipment?
+
+What happens when permit approval arrives after 10 days?
+
+How do you avoid double-booking a drone?
+
+Those are much better questions.

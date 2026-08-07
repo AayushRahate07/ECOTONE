@@ -1,0 +1,86 @@
+✅ RATE LIMITER FAIRNESS
+
+✅ REDIS STREAM VS KAFKA STREAM
+
+
+////////////////////////////////////////////////////////////
+
+
+SET
+GET
+DEL
+EXISTS
+
+Know these cold.
+
+2. Data Types ⭐⭐⭐⭐⭐
+String
+SET name Aayush
+GET name
+
+Use cases:
+
+Counters
+Configs
+Sessions
+Hash
+HSET user:1 name Aayush age 19
+
+Use case:
+
+User Profile
+Driver Details
+Incident Details
+
+Most important for projects.
+
+List
+LPUSH
+RPUSH
+LPOP
+RPOP
+
+Use case:
+
+Task Queue
+Notification Queue
+Set
+SADD
+SMEMBERS
+
+Use case:
+
+Unique Tags
+Unique Users
+Sorted Set ⭐⭐⭐⭐⭐
+
+Interview favorite.
+
+ZADD
+ZRANGE
+
+Use case:
+
+Leaderboard
+Trending Topics
+Ranking
+
+Must learn.
+
+
+8. Redis GEO Commands ⭐⭐⭐⭐
+
+For AEGIS.
+
+Learn:
+
+GEOADD
+GEOPOS
+GEODIST
+GEOSEARCH
+
+Use case:
+
+Nearest Ambulance
+Nearest Police Vehicle
+Nearest Fire Truck

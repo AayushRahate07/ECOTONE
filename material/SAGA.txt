@@ -1,0 +1,127 @@
+1. Why Saga Pattern Exists
+Distributed Transactions Problem
+Microservices + Multiple Databases
+Why 2PC (Two Phase Commit) is problematic
+Slow
+Blocking
+Poor scalability
+2. What is a Saga?
+Sequence of local transactions
+Each service commits its own DB transaction
+Failure handled via compensation
+
+Example:
+
+Order Service -> Payment Service -> Inventory Service
+3. Saga Components
+Local Transaction
+Saga Orchestrator (optional)
+Compensation Transaction
+Events / Messages
+4. Saga Execution Models
+A. Choreography
+
+Services communicate through events.
+
+OrderCreated
+    ↓
+PaymentProcessed
+    ↓
+InventoryReserved
+
+Pros:
+
+Decentralized
+
+Cons:
+
+Event spaghetti
+Hard debugging
+B. Orchestration
+
+Central coordinator controls flow.
+
+Orchestrator
+     ↓
+Order
+     ↓
+Payment
+     ↓
+Inventory
+
+Pros:
+
+Easier tracking
+Easier debugging
+
+Cons:
+
+Single coordinator component
+5. Compensation Transactions
+
+Most important topic.
+
+If Inventory fails:
+
+Order Created ✓
+Payment Done ✓
+Inventory Failed ✗
+
+Compensation:
+
+Refund Payment
+Cancel Order
+6. Saga Workflow Example
+
+Classic E-commerce:
+
+Create Order
+      ↓
+Reserve Inventory
+      ↓
+Process Payment
+      ↓
+Arrange Delivery
+
+Failure at any step:
+
+Compensate previous successful steps
+7. Saga State Management
+Pending
+Completed
+Failed
+Compensating
+Compensated
+8. Saga + Kafka
+Kafka transports saga events
+Services publish/consume events
+Kafka is NOT the saga
+Kafka is the messenger carrying saga messages
+9. Saga vs 2PC
+Feature	Saga	2PC
+Consistency	Eventual	Strong
+Scalability	High	Low
+Blocking	No	Yes
+Microservices	Excellent	Poor
+Compensation Needed	Yes	No
+10. Saga + Outbox Pattern
+
+Very common interview combo.
+
+DB Transaction
+     +
+Outbox Event
+     ↓
+Kafka
+     ↓
+Saga Continues
+
+Outbox ensures event isn't lost.
+Saga ensures business transaction eventually completes.
+
+11. Challenges / Limitations
+Eventual consistency
+Complex compensations
+Duplicate events
+Ordering issues
+Debugging distributed flows

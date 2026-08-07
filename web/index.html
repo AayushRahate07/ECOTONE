@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ECOTONE | Field Operations Atlas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,100..900;1,100..900&family=Carme&family=Cinzel+Decorative:wght@400;700;900&family=Cormorant+Unicase:wght@300;400;500;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Figtree:ital,wght@0,300..900;1,300..900&family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Fontdiner+Swanky&family=Geologica:wght,CRSV@100..900,0&family=Josefin+Sans:ital,wght@0,100..700;1,100..700&family=Lexend+Deca:wght@100..900&family=MedievalSharp&family=Metamorphous&family=Modern+Antiqua&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Oldenburg&family=Playwrite+PL:wght@100..400&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Prata&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://fonts.cdnfonts.com/css/garet" rel="stylesheet" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="styles.css?v=4" />
+  </head>
+  <body>
+    <header class="top-nav">
+      <div class="nav-brand" onclick="navigateTo('#/')">
+        ECOTONE <span>ATLAS</span>
+      </div>
+      <nav class="nav-links">
+        <a href="#/" class="nav-item active" id="nav-overview"
+          >Operations Atlas</a
+        >
+        <a href="#/projects" class="nav-item" id="nav-projects">Expeditions</a>
+        <a href="#/resources" class="nav-item" id="nav-resources"
+          >Field Assets</a
+        >
+        <a href="#/system" class="nav-item" id="nav-system">System Console</a>
+      </nav>
+      <a href="#/projects/new" class="btn primary-btn">+ Plan Operation</a>
+    </header>
+
+    <main id="app-content">
+      <!-- Operations Atlas (Overview Page) -->
+      <div id="view-overview" class="view">
+        <div class="atlas-header">
+          <div class="atlas-title-group">
+            <h1>OPERATIONS ATLAS</h1>
+            <div class="sub-loc">
+              GEOSPATIAL ORCHESTRATION FOR CONSERVATION AND HERITAGE FIELD
+              OPERATIONS
+            </div>
+          </div>
+        </div>
+
+        <div
+          style="
+            display: flex;
+            gap: 2.5rem;
+            margin-bottom: 2.5rem;
+            align-items: stretch;
+          "
+        >
+          <div
+            class="overview-operations"
+            style="
+              width: 40%;
+              display: flex;
+              flex-direction: column;
+              height: 480px;
+              border: 1px solid var(--border-medium);
+              background: var(--bg-dark);
+            "
+          >
+            <div
+              style="
+                padding: 1.0rem 1.5rem;
+                border-bottom: 1px solid var(--border-medium);
+                background: var(--surface-elevated);
+              "
+            >
+              <h2
+                style="
+                  font-family: &quot;Garet&quot;, sans-serif;
+                  font-size: 1.1rem;
+                  letter-spacing: 0.1em;
+                  color: var(--parchment);
+                  margin-bottom: 0.4rem;
+                  text-transform: uppercase;
+                "
+              >
+                Current Operations
+              </h2>
+              <div
+                id="overview-op-summary"
+                class="mono-meta"
+                style="color: var(--stone)"
+              >
+                -- ACTIVE · -- CLEARANCE · -- COMPENSATING
+              </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div
+              id="overview-filter-bar"
+              style="
+                display: flex;
+                gap: 1.0rem;
+                padding: 0.5rem 1.5rem;
+                border-bottom: 1px solid var(--border-subtle);
+                background: var(--surface-dark);
+              "
+            >
+              <select
+                id="filter-status"
+                onchange="applyOverviewFilters()"
+                style="
+                  flex: 1;
+                  background: var(--bg-dark);
+                  border: 1px solid var(--border-medium);
+                  color: var(--parchment-muted);
+                  padding: 0.35rem 0.5rem;
+                  font-family: &quot;JetBrains Mono&quot;, monospace;
+                  font-size: 0.7rem;
+                  text-transform: uppercase;
+                "
+              >
+                <option value="">ALL STATUS</option>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="DRAFT">PENDING</option>
+                <option value="COMPENSATING">COMPENSATING</option>
+                <option value="CANCELLED">CANCELLED</option>
+              </select>
+              <select
+                id="filter-priority"
+                onchange="applyOverviewFilters()"
+                style="
+                  flex: 1;
+                  background: var(--bg-dark);
+                  border: 1px solid var(--border-medium);
+                  color: var(--parchment-muted);
+                  padding: 0.35rem 0.5rem;
+                  font-family: &quot;JetBrains Mono&quot;, monospace;
+                  font-size: 0.7rem;
+                  text-transform: uppercase;
+                "
+              >
+                <option value="">ALL PRIORITY</option>
+                <option value="CRITICAL">CRITICAL</option>
+                <option value="HIGH">HIGH</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="LOW">LOW</option>
+              </select>
+              <select
+                id="filter-type"
+                onchange="applyOverviewFilters()"
+                style="
+                  flex: 1;
+                  background: var(--bg-dark);
+                  border: 1px solid var(--border-medium);
+                  color: var(--parchment-muted);
+                  padding: 0.35rem 0.5rem;
+                  font-family: &quot;JetBrains Mono&quot;, monospace;
+                  font-size: 0.7rem;
+                  text-transform: uppercase;
+                "
+              >
+                <option value="">ALL TYPES</option>
+                <option value="HERITAGE">HERITAGE</option>
+                <option value="CONSERVATION">CONSERVATION</option>
+              </select>
+            </div>
+
+            <div
+              id="overview-op-list"
+              style="flex-grow: 1; overflow-y: auto; padding: 0 1.5rem"
+            >
+              <!-- Populated by JS -->
+            </div>
+
+            <div
+              style="
+                padding: 1rem 1.5rem;
+                border-top: 1px solid var(--border-medium);
+              "
+            >
+              <a
+                href="#/projects/new"
+                class="btn secondary-btn"
+                style="width: 100%; text-align: center; display: block"
+                >+ PLAN OPERATION</a
+              >
+            </div>
+          </div>
+
+          <!-- Full-Bleed Map View -->
+          <div
+            class="full-map-wrap"
+            style="width: 60%; margin-bottom: 0; flex-grow: 1; height: 480px"
+          >
+            <div id="overview-map"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plan Field Operation (New Deployment Wizard Page) -->
+      <div id="view-new-project" class="view hidden">
+        <div class="atlas-header">
+          <div class="atlas-title-group">
+            <h1>PLAN FIELD OPERATION</h1>
+            <div class="sub-loc">RESOURCE PROVISIONALING & SPATIAL CHECK</div>
+          </div>
+        </div>
+
+        <div class="wizard-grid">
+          <div>
+            <div class="form-field">
+              <label>Operation Title</label>
+              <input
+                type="text"
+                id="np-title"
+                value=""
+                placeholder="e.g. Western Ghats Biodiversity Survey"
+              />
+            </div>
+            <div class="form-field">
+              <label>Survey Site Name</label>
+              <input
+                type="text"
+                id="np-location"
+                value=""
+                placeholder="e.g. Satara Corridor"
+              />
+            </div>
+            <div
+              class="form-field"
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem"
+            >
+              <div>
+                <label>Latitude (°N)</label>
+                <input type="number" id="np-lat" value="" step="0.0001" />
+              </div>
+              <div>
+                <label>Longitude (°E)</label>
+                <input type="number" id="np-lon" value="" step="0.0001" />
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label>Required Field Assets</label>
+              <div class="checkbox-row" id="np-equipment-list">
+                <label
+                  ><input type="checkbox" value="DRONE" checked /> DRONE</label
+                >
+                <label
+                  ><input type="checkbox" value="SEQUENCER" checked />
+                  SEQUENCER</label
+                >
+                <label><input type="checkbox" value="RADAR" /> RADAR</label>
+                <label
+                  ><input type="checkbox" value="VEHICLE" checked />
+                  VEHICLE</label
+                >
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label>Grant Budget (INR)</label>
+              <input type="number" id="np-budget" value="350000" />
+            </div>
+
+            <div class="form-field">
+              <label>Simulation Mode (Saga Compensation Test)</label>
+              <select id="np-sim-mode">
+                <option value="HAPPY_PATH">
+                  Normal Operation (Permit Approved)
+                </option>
+                <option value="FORCE_REJECT">
+                  Simulate Regulatory Permit Rejection (Triggers Compensation)
+                </option>
+              </select>
+            </div>
+
+            <button
+              class="btn primary-btn"
+              id="btn-analyze"
+              onclick="analyzeNewProject()"
+            >
+              Run Spatial & Asset Analysis
+            </button>
+
+            <div
+              id="analysis-result"
+              class="hidden"
+              style="
+                margin-top: 1.5rem;
+                border-top: 1px solid var(--border-medium);
+                padding-top: 1rem;
+              "
+            >
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <div
+            style="
+              height: 480px;
+              border: 1px solid var(--border-medium);
+              position: relative;
+            "
+          >
+            <div
+              style="
+                position: absolute;
+                bottom: 10px;
+                left: 10px;
+                z-index: 1000;
+                background: rgba(17, 22, 18, 0.797);
+                padding: 6px 12px;
+                font-size: 0.75rem;
+                color: var(--moss-light);
+                border: 1px solid var(--border-medium);
+                pointer-events: none;
+              "
+            >
+              CLICK ANYWHERE ON MAP TO PICK COORDINATES
+            </div>
+            <div id="new-project-map"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project Detail (Editorial & Horizontal Saga Page) -->
+      <div id="view-project-detail" class="view hidden">
+        <div
+          class="project-editorial-header"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+          "
+        >
+          <div>
+            <h1 id="pd-title">WESTERN GHATS BIODIVERSITY SURVEY</h1>
+            <div class="editorial-meta-row">
+              <span id="pd-location-meta">SATARA · 17.6805° N, 73.0183° E</span>
+              <span id="pd-status-tag" class="status-tag active">● ACTIVE</span>
+            </div>
+          </div>
+          <button
+            id="pd-delete-btn"
+            class="btn secondary-btn"
+            style="
+              border-color: var(--rust);
+              color: var(--rust);
+              margin-top: 0.5rem;
+            "
+          >
+            Delete Expedition
+          </button>
+        </div>
+
+        <!-- Horizontal Saga Visualization -->
+        <div class="horizontal-saga" id="pd-saga-viz">
+          <!-- Dynamic horizontal saga nodes populated by JS -->
+        </div>
+
+        <!-- Field Allocation Matrix -->
+        <div class="field-allocation-matrix" id="pd-allocation-matrix">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Map View for Project Site -->
+        <div class="full-map-wrap" style="height: 400px">
+          <div id="detail-map"></div>
+        </div>
+
+        <!-- Event Stream Log -->
+        <div style="margin-top: 2rem">
+          <div class="mono-meta" style="margin-bottom: 0.5rem">
+            SAGA EVENT LOG EXECUTION HISTORY
+          </div>
+          <div id="pd-event-log-container" class="tech-log-pre"></div>
+        </div>
+      </div>
+
+      <!-- Expeditions Ledger (All Projects) -->
+      <div id="view-projects" class="view hidden">
+        <div class="atlas-header">
+          <div class="atlas-title-group">
+            <h1>FIELD EXPEDITIONS</h1>
+            <div class="sub-loc">ALL REGISTERED ECOTONE OPERATIONS</div>
+          </div>
+        </div>
+
+        <div class="expeditions-ledger">
+          <table class="ledger-table">
+            <thead>
+              <tr>
+                <th>EXPEDITION NAME</th>
+                <th>SURVEY SITE</th>
+                <th>STATUS</th>
+                <th>GRANT BUDGET</th>
+                <th>ACTION</th>
+              </tr>
+            </thead>
+            <tbody id="all-projects-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Field Assets (Resources) -->
+      <div id="view-resources" class="view hidden">
+        <div class="atlas-header">
+          <div class="atlas-title-group">
+            <h1>FIELD ASSETS</h1>
+            <div class="sub-loc">EQUIPMENT INVENTORY & DEPLOYED TEAMS</div>
+          </div>
+        </div>
+
+        <div class="wizard-grid">
+          <div>
+            <h3
+              style="
+                margin-bottom: 1rem;
+                font-size: 1.1rem;
+                color: var(--stone);
+              "
+            >
+              EQUIPMENT DEPOTS
+            </h3>
+            <table class="ledger-table">
+              <thead>
+                <tr>
+                  <th>ASSET NAME</th>
+                  <th>TYPE</th>
+                  <th>DEPOT</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="res-equipment-body"></tbody>
+            </table>
+          </div>
+
+          <div>
+            <h3
+              style="
+                margin-bottom: 1rem;
+                font-size: 1.1rem;
+                color: var(--stone);
+              "
+            >
+              FIELD TEAMS
+            </h3>
+            <table class="ledger-table">
+              <thead>
+                <tr>
+                  <th>MEMBER</th>
+                  <th>ROLE</th>
+                  <th>BASE</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="res-teams-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Console -->
+      <div id="view-system" class="view hidden">
+        <div class="atlas-header">
+          <div class="atlas-title-group">
+            <h1>SYSTEM CONSOLE</h1>
+            <div class="sub-loc">EVENT BUS & INFRASTRUCTURE HEALTH</div>
+          </div>
+        </div>
+
+        <div
+          class="field-allocation-matrix"
+          id="sys-health-grid"
+          style="margin-bottom: 2rem"
+        ></div>
+
+        <div class="mono-meta" style="margin-bottom: 0.5rem">
+          LIVE DISTRIBUTED EVENT STREAM
+        </div>
+        <div id="sys-stream" class="tech-log-pre" style="height: 350px"></div>
+      </div>
+    </main>
+
+    <footer
+      style="
+        border-top: 1px solid var(--border-medium);
+        padding: 2.5rem;
+        text-align: center;
+        color: var(--stone);
+        font-size: 0.85rem;
+        margin-top: 2rem;
+      "
+    >
+      <div
+        style="
+          font-family: &quot;Garet&quot;, sans-serif;
+          letter-spacing: 0.1em;
+          margin-bottom: 0.5rem;
+          color: var(--parchment-muted);
+        "
+      >
+        ECOTONE ATLAS &copy; 2026
+      </div>
+      <div>
+        GEOSPATIAL ORCHESTRATION FOR CONSERVATION AND HERITAGE FIELD OPERATIONS
+      </div>
+    </footer>
+
+    <script src="app.js?v=8"></script>
+  </body>
+</html>
