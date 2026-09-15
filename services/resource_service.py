@@ -80,6 +80,57 @@ class ResourceService:
         self.db = db
         bus.subscribe(TOPICS["COMMAND_RESERVE_RESOURCES"], self.handle_reserve_resources)
         bus.subscribe(TOPICS["COMMAND_RELEASE_RESOURCES"], self.handle_release_resources)
+    def check_spatial_constraints(self, lat, lon, site_polygon=None):
+        violated = []
+        if getattr(resource_db, '_use_pg', False) and site_polygon:
+            # PostgreSQL PostGIS intersection
+            try:
+                import psycopg2
+                with resource_db.begin() as tx:
+                    if hasattr(tx, 'conn') and isinstance(tx.conn, psycopg2.extensions.connection):
+                        # Convert JS nested array to WKT
+                        # Leaflet polygon format is typically a list of [lng, lat]
+                        if isinstance(site_polygon[0], list):
+                            points = [f"{pt[0]} {pt[1]}" for pt in site_polygon]
+                            if points[0] != points[-1]:
+                                points.append(points[0])  # Close the polygon
+                            polygon_wkt = f"POLYGON(({', '.join(points)}))"
+                            
+                            cur = tx.execute("""
+                                SELECT constraint_id, name, constraint_type 
+                                FROM spatial_constraints 
+                                WHERE ST_Intersects(geom, ST_GeomFromText(%s, 4326))
+                            """, (polygon_wkt,))
+                            rows = cur.fetchall()
+                            for r in rows:
+                                violated.append({"id": r[0], "name": r[1], "type": r[2]})
+                            return violated
+            except Exception as e:
+                import logging
+                logging.getLogger("AEGIS_RESOURCE_SERVICE").error(f"PostGIS check failed: {e}")
+                # Fallback to simple bounding box
+                pass
+
+        # Fallback SQLite bounding box logic
+        with resource_db.begin() as tx:
+            cur = tx.execute("SELECT constraint_id, name, constraint_type, min_lat, max_lat, min_lon, max_lon FROM spatial_constraints")
+            rows = cur.fetchall()
+            
+            for r_id, name, c_type, min_lat, max_lat, min_lon, max_lon in rows:
+                if site_polygon:
+                    # Check if any point in the polygon falls within the bounding box
+                    for pt in site_polygon:
+                        pt_lng = pt[0]
+                        pt_lat = pt[1]
+                        if min_lat <= pt_lat <= max_lat and min_lon <= pt_lng <= max_lon:
+                            violated.append({"id": r_id, "name": name, "type": c_type})
+                            break
+                else:
+                    if min_lat <= lat <= max_lat and min_lon <= lon <= max_lon:
+                        violated.append({"id": r_id, "name": name, "type": c_type})
+                        
+        return violated
+
 
     def handle_reserve_resources(self, event: Dict[str, Any]):
         event_id = event["event_id"]
@@ -203,9 +254,9 @@ with resource_db.begin() as tx:
         )
 
     constraints_seed = [
-        ("constraint-1", "Koyna Wildlife Sanctuary Restricted Zone", "PROTECTED_FOREST", 17.40, 17.60, 73.65, 73.80),
         ("constraint-2", "Western Ghats Airspace No-Fly Polygon", "NO_FLY_ZONE", 18.10, 18.30, 73.40, 73.60),
     ]
+    tx.execute("DELETE FROM spatial_constraints WHERE constraint_id = 'constraint-1'")
     for c in constraints_seed:
         tx.execute(
             "INSERT OR IGNORE INTO spatial_constraints (constraint_id, name, constraint_type, min_lat, max_lat, min_lon, max_lon) "
@@ -215,3 +266,4 @@ with resource_db.begin() as tx:
 
 resource_service = ResourceService(resource_db)
 resource_outbox = OutboxWorker(resource_db, "resource_service")
+

@@ -1,519 +1,294 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ECOTONE | Field Operations Atlas</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,100..900;1,100..900&family=Carme&family=Cinzel+Decorative:wght@400;700;900&family=Cormorant+Unicase:wght@300;400;500;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Figtree:ital,wght@0,300..900;1,300..900&family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Fontdiner+Swanky&family=Geologica:wght,CRSV@100..900,0&family=Josefin+Sans:ital,wght@0,100..700;1,100..700&family=Lexend+Deca:wght@100..900&family=MedievalSharp&family=Metamorphous&family=Modern+Antiqua&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Oldenburg&family=Playwrite+PL:wght@100..400&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Prata&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap"
-      rel="stylesheet"
-    />
-    <link href="https://fonts.cdnfonts.com/css/garet" rel="stylesheet" />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="styles.css?v=4" />
-  </head>
-  <body>
-    <header class="top-nav">
-      <div class="nav-brand" onclick="navigateTo('#/')">
-        ECOTONE <span>ATLAS</span>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ecotone Resources</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <link rel="stylesheet" href="styles.css?v=1012" />
+</head>
+<body>
+<header class="top-nav">
+  <div class="nav-brand" onclick="navigateTo('#/')">
+    Ecotone <span>Atlas</span>
+  </div>
+  <nav class="nav-links">
+    <a href="#/" class="nav-item active" id="nav-overview">Operations</a>
+    <a href="#/projects" class="nav-item" id="nav-projects">Expeditions</a>
+    <a href="#/resources" class="nav-item" id="nav-resources">Field assets</a>
+    <a href="#/system" class="nav-item" id="nav-system">Console</a>
+  </nav>
+  <a href="#/projects/new" class="btn primary-btn">Plan operation</a>
+</header>
+
+<main id="app-content">
+
+<div id="view-overview" class="view">
+  <div class="page-hero">
+    <div>
+      <div class="page-eyebrow">Field operations · Western Ghats corridor</div>
+      <h1 class="page-title">Operations Atlas</h1>
+    </div>
+    <div class="pixel-mosaic" id="mosaic-overview"></div>
+  </div>
+
+  <!-- Hero Readout Strip -->
+  <div class="hero-strip" id="hero-strip">
+    <div class="hero-tile">
+      <div class="hero-tile-label">Active operations</div>
+      <div class="hero-tile-value active-val" id="hero-active">0</div>
+      <div class="hero-tile-sub">Currently deployed</div>
+    </div>
+    <div class="hero-tile">
+      <div class="hero-tile-label">Pending permits</div>
+      <div class="hero-tile-value pending-val" id="hero-pending">0</div>
+      <div class="hero-tile-sub">Awaiting clearance</div>
+    </div>
+    <div class="hero-tile">
+      <div class="hero-tile-label">Compensating</div>
+      <div class="hero-tile-value compensating-val" id="hero-comp">0</div>
+      <div class="hero-tile-sub">Saga rollback active</div>
+    </div>
+    <div class="hero-tile">
+      <div class="hero-tile-label">At risk</div>
+      <div class="hero-tile-value risk-val" id="hero-risk">0</div>
+      <div class="hero-tile-sub">Constraint flags</div>
+    </div>
+    <div class="saga-health-tile">
+      <div class="saga-health-label">Saga health</div>
+      <div class="saga-health-bar"><div class="saga-health-fill" id="saga-health-fill" style="width:0%"></div></div>
+      <div class="saga-health-pct" id="saga-health-pct">-</div>
+    </div>
+  </div>
+
+  <!-- Two-column: Field Log (38%) + Map (62%) -->
+  <div style="display: flex; gap: 1.5rem; margin-bottom: 2.5rem; align-items: stretch;">
+    <div class="overview-operations field-log-panel" style="width: 38%; height: 520px; display: flex; flex-direction: column;">
+      <div class="field-log-header">
+        <div class="field-log-title">CURRENT OPERATIONS</div>
+        <div class="field-log-summary" id="overview-op-summary">00 ACTIVE · 00 CLEARANCE · 00 COMPENSATING</div>
       </div>
-      <nav class="nav-links">
-        <a href="#/" class="nav-item active" id="nav-overview"
-          >Operations Atlas</a
-        >
-        <a href="#/projects" class="nav-item" id="nav-projects">Expeditions</a>
-        <a href="#/resources" class="nav-item" id="nav-resources"
-          >Field Assets</a
-        >
-        <a href="#/system" class="nav-item" id="nav-system">System Console</a>
-      </nav>
-      <a href="#/projects/new" class="btn primary-btn">+ Plan Operation</a>
-    </header>
+      <div class="field-log-divider"></div>
 
-    <main id="app-content">
-      <!-- Operations Atlas (Overview Page) -->
-      <div id="view-overview" class="view">
-        <div class="atlas-header">
-          <div class="atlas-title-group">
-            <h1>OPERATIONS ATLAS</h1>
-            <div class="sub-loc">
-              GEOSPATIAL ORCHESTRATION FOR CONSERVATION AND HERITAGE FIELD
-              OPERATIONS
-            </div>
-          </div>
-        </div>
-
-        <div
-          style="
-            display: flex;
-            gap: 2.5rem;
-            margin-bottom: 2.5rem;
-            align-items: stretch;
-          "
-        >
-          <div
-            class="overview-operations"
-            style="
-              width: 40%;
-              display: flex;
-              flex-direction: column;
-              height: 480px;
-              border: 1px solid var(--border-medium);
-              background: var(--bg-dark);
-            "
-          >
-            <div
-              style="
-                padding: 1.0rem 1.5rem;
-                border-bottom: 1px solid var(--border-medium);
-                background: var(--surface-elevated);
-              "
-            >
-              <h2
-                style="
-                  font-family: &quot;Garet&quot;, sans-serif;
-                  font-size: 1.1rem;
-                  letter-spacing: 0.1em;
-                  color: var(--parchment);
-                  margin-bottom: 0.4rem;
-                  text-transform: uppercase;
-                "
-              >
-                Current Operations
-              </h2>
-              <div
-                id="overview-op-summary"
-                class="mono-meta"
-                style="color: var(--stone)"
-              >
-                -- ACTIVE · -- CLEARANCE · -- COMPENSATING
-              </div>
-            </div>
-
-            <!-- Filter Bar -->
-            <div
-              id="overview-filter-bar"
-              style="
-                display: flex;
-                gap: 1.0rem;
-                padding: 0.5rem 1.5rem;
-                border-bottom: 1px solid var(--border-subtle);
-                background: var(--surface-dark);
-              "
-            >
-              <select
-                id="filter-status"
-                onchange="applyOverviewFilters()"
-                style="
-                  flex: 1;
-                  background: var(--bg-dark);
-                  border: 1px solid var(--border-medium);
-                  color: var(--parchment-muted);
-                  padding: 0.35rem 0.5rem;
-                  font-family: &quot;JetBrains Mono&quot;, monospace;
-                  font-size: 0.7rem;
-                  text-transform: uppercase;
-                "
-              >
-                <option value="">ALL STATUS</option>
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="DRAFT">PENDING</option>
-                <option value="COMPENSATING">COMPENSATING</option>
-                <option value="CANCELLED">CANCELLED</option>
-              </select>
-              <select
-                id="filter-priority"
-                onchange="applyOverviewFilters()"
-                style="
-                  flex: 1;
-                  background: var(--bg-dark);
-                  border: 1px solid var(--border-medium);
-                  color: var(--parchment-muted);
-                  padding: 0.35rem 0.5rem;
-                  font-family: &quot;JetBrains Mono&quot;, monospace;
-                  font-size: 0.7rem;
-                  text-transform: uppercase;
-                "
-              >
-                <option value="">ALL PRIORITY</option>
-                <option value="CRITICAL">CRITICAL</option>
-                <option value="HIGH">HIGH</option>
-                <option value="MEDIUM">MEDIUM</option>
-                <option value="LOW">LOW</option>
-              </select>
-              <select
-                id="filter-type"
-                onchange="applyOverviewFilters()"
-                style="
-                  flex: 1;
-                  background: var(--bg-dark);
-                  border: 1px solid var(--border-medium);
-                  color: var(--parchment-muted);
-                  padding: 0.35rem 0.5rem;
-                  font-family: &quot;JetBrains Mono&quot;, monospace;
-                  font-size: 0.7rem;
-                  text-transform: uppercase;
-                "
-              >
-                <option value="">ALL TYPES</option>
-                <option value="HERITAGE">HERITAGE</option>
-                <option value="CONSERVATION">CONSERVATION</option>
-              </select>
-            </div>
-
-            <div
-              id="overview-op-list"
-              style="flex-grow: 1; overflow-y: auto; padding: 0 1.5rem"
-            >
-              <!-- Populated by JS -->
-            </div>
-
-            <div
-              style="
-                padding: 1rem 1.5rem;
-                border-top: 1px solid var(--border-medium);
-              "
-            >
-              <a
-                href="#/projects/new"
-                class="btn secondary-btn"
-                style="width: 100%; text-align: center; display: block"
-                >+ PLAN OPERATION</a
-              >
-            </div>
-          </div>
-
-          <!-- Full-Bleed Map View -->
-          <div
-            class="full-map-wrap"
-            style="width: 60%; margin-bottom: 0; flex-grow: 1; height: 480px"
-          >
-            <div id="overview-map"></div>
-          </div>
-        </div>
+      <div class="field-log-filters">
+        <select id="filter-status" onchange="applyOverviewFilters()">
+          <option value="">ALL STATUS</option>
+          <option value="ACTIVE">ACTIVE</option>
+          <option value="DRAFT">PENDING</option>
+          <option value="COMPENSATING">COMPENSATING</option>
+          <option value="CANCELLED">CANCELLED</option>
+        </select>
+        <select id="filter-priority" onchange="applyOverviewFilters()">
+          <option value="">ALL PRIORITY</option>
+          <option value="CRITICAL">CRITICAL</option>
+          <option value="HIGH">HIGH</option>
+          <option value="MEDIUM">MEDIUM</option>
+          <option value="LOW">LOW</option>
+        </select>
+        <select id="filter-domain" onchange="applyOverviewFilters()">
+          <option value="">ALL TYPES</option>
+          <option value="CONSERVATION">CONSERVATION</option>
+          <option value="HERITAGE">HERITAGE</option>
+          <option value="SURVEY">SURVEY</option>
+        </select>
       </div>
 
-      <!-- Plan Field Operation (New Deployment Wizard Page) -->
-      <div id="view-new-project" class="view hidden">
-        <div class="atlas-header">
-          <div class="atlas-title-group">
-            <h1>PLAN FIELD OPERATION</h1>
-            <div class="sub-loc">RESOURCE PROVISIONALING & SPATIAL CHECK</div>
-          </div>
+      <div id="overview-op-list" class="field-log-list"></div>
+
+      <a href="#/projects/new" class="field-log-add-btn">+ PLAN OPERATION</a>
+    </div>
+
+    <div class="full-map-wrap" style="width: 62%; height: 520px; flex-grow: 1; border: 1px solid var(--border-medium); border-left: none; margin-bottom: 0;">
+      <div id="overview-map"></div>
+    </div>
+  </div>
+</div>
+
+<div id="view-new-project" class="view hidden">
+  <div class="atlas-header">
+    <h1>Plan field operation</h1>
+  </div>
+
+  <div class="wizard-grid">
+    <div>
+      <div class="form-field">
+        <label>Operation title</label>
+        <input type="text" id="np-title" value="" placeholder="e.g. Western Ghats Biodiversity Survey" />
+      </div>
+      <div class="form-field">
+        <label>Survey site name</label>
+        <input type="text" id="np-location" value="" placeholder="e.g. Satara Corridor" />
+      </div>
+      <div class="form-field" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem">
+        <div>
+          <label>Latitude</label>
+          <input type="number" id="np-lat" value="" step="0.0001" />
         </div>
-
-        <div class="wizard-grid">
-          <div>
-            <div class="form-field">
-              <label>Operation Title</label>
-              <input
-                type="text"
-                id="np-title"
-                value=""
-                placeholder="e.g. Western Ghats Biodiversity Survey"
-              />
-            </div>
-            <div class="form-field">
-              <label>Survey Site Name</label>
-              <input
-                type="text"
-                id="np-location"
-                value=""
-                placeholder="e.g. Satara Corridor"
-              />
-            </div>
-            <div
-              class="form-field"
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem"
-            >
-              <div>
-                <label>Latitude (°N)</label>
-                <input type="number" id="np-lat" value="" step="0.0001" />
-              </div>
-              <div>
-                <label>Longitude (°E)</label>
-                <input type="number" id="np-lon" value="" step="0.0001" />
-              </div>
-            </div>
-
-            <div class="form-field">
-              <label>Required Field Assets</label>
-              <div class="checkbox-row" id="np-equipment-list">
-                <label
-                  ><input type="checkbox" value="DRONE" checked /> DRONE</label
-                >
-                <label
-                  ><input type="checkbox" value="SEQUENCER" checked />
-                  SEQUENCER</label
-                >
-                <label><input type="checkbox" value="RADAR" /> RADAR</label>
-                <label
-                  ><input type="checkbox" value="VEHICLE" checked />
-                  VEHICLE</label
-                >
-              </div>
-            </div>
-
-            <div class="form-field">
-              <label>Grant Budget (INR)</label>
-              <input type="number" id="np-budget" value="350000" />
-            </div>
-
-            <div class="form-field">
-              <label>Simulation Mode (Saga Compensation Test)</label>
-              <select id="np-sim-mode">
-                <option value="HAPPY_PATH">
-                  Normal Operation (Permit Approved)
-                </option>
-                <option value="FORCE_REJECT">
-                  Simulate Regulatory Permit Rejection (Triggers Compensation)
-                </option>
-              </select>
-            </div>
-
-            <button
-              class="btn primary-btn"
-              id="btn-analyze"
-              onclick="analyzeNewProject()"
-            >
-              Run Spatial & Asset Analysis
-            </button>
-
-            <div
-              id="analysis-result"
-              class="hidden"
-              style="
-                margin-top: 1.5rem;
-                border-top: 1px solid var(--border-medium);
-                padding-top: 1rem;
-              "
-            >
-              <!-- Populated by JS -->
-            </div>
-          </div>
-
-          <div
-            style="
-              height: 480px;
-              border: 1px solid var(--border-medium);
-              position: relative;
-            "
-          >
-            <div
-              style="
-                position: absolute;
-                bottom: 10px;
-                left: 10px;
-                z-index: 1000;
-                background: rgba(17, 22, 18, 0.797);
-                padding: 6px 12px;
-                font-size: 0.75rem;
-                color: var(--moss-light);
-                border: 1px solid var(--border-medium);
-                pointer-events: none;
-              "
-            >
-              CLICK ANYWHERE ON MAP TO PICK COORDINATES
-            </div>
-            <div id="new-project-map"></div>
-          </div>
+        <div>
+          <label>Longitude</label>
+          <input type="number" id="np-lon" value="" step="0.0001" />
         </div>
       </div>
-
-      <!-- Project Detail (Editorial & Horizontal Saga Page) -->
-      <div id="view-project-detail" class="view hidden">
-        <div
-          class="project-editorial-header"
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-          "
-        >
-          <div>
-            <h1 id="pd-title">WESTERN GHATS BIODIVERSITY SURVEY</h1>
-            <div class="editorial-meta-row">
-              <span id="pd-location-meta">SATARA · 17.6805° N, 73.0183° E</span>
-              <span id="pd-status-tag" class="status-tag active">● ACTIVE</span>
-            </div>
-          </div>
-          <button
-            id="pd-delete-btn"
-            class="btn secondary-btn"
-            style="
-              border-color: var(--rust);
-              color: var(--rust);
-              margin-top: 0.5rem;
-            "
-          >
-            Delete Expedition
-          </button>
-        </div>
-
-        <!-- Horizontal Saga Visualization -->
-        <div class="horizontal-saga" id="pd-saga-viz">
-          <!-- Dynamic horizontal saga nodes populated by JS -->
-        </div>
-
-        <!-- Field Allocation Matrix -->
-        <div class="field-allocation-matrix" id="pd-allocation-matrix">
-          <!-- Populated by JS -->
-        </div>
-
-        <!-- Map View for Project Site -->
-        <div class="full-map-wrap" style="height: 400px">
-          <div id="detail-map"></div>
-        </div>
-
-        <!-- Event Stream Log -->
-        <div style="margin-top: 2rem">
-          <div class="mono-meta" style="margin-bottom: 0.5rem">
-            SAGA EVENT LOG EXECUTION HISTORY
-          </div>
-          <div id="pd-event-log-container" class="tech-log-pre"></div>
+      <div class="form-field">
+        <label>Required field assets</label>
+        <div class="checkbox-row" id="np-equipment-list">
+          <label><input type="checkbox" value="DRONE" checked /> Drone</label>
+          <label><input type="checkbox" value="SEQUENCER" checked /> Sequencer</label>
+          <label><input type="checkbox" value="RADAR" /> Radar</label>
+          <label><input type="checkbox" value="VEHICLE" checked /> Vehicle</label>
         </div>
       </div>
-
-      <!-- Expeditions Ledger (All Projects) -->
-      <div id="view-projects" class="view hidden">
-        <div class="atlas-header">
-          <div class="atlas-title-group">
-            <h1>FIELD EXPEDITIONS</h1>
-            <div class="sub-loc">ALL REGISTERED ECOTONE OPERATIONS</div>
-          </div>
-        </div>
-
-        <div class="expeditions-ledger">
-          <table class="ledger-table">
-            <thead>
-              <tr>
-                <th>EXPEDITION NAME</th>
-                <th>SURVEY SITE</th>
-                <th>STATUS</th>
-                <th>GRANT BUDGET</th>
-                <th>ACTION</th>
-              </tr>
-            </thead>
-            <tbody id="all-projects-body">
-              <!-- Populated by JS -->
-            </tbody>
-          </table>
-        </div>
+      <div class="form-field">
+        <label>Grant budget (INR)</label>
+        <input type="number" id="np-budget" value="350000" />
       </div>
-
-      <!-- Field Assets (Resources) -->
-      <div id="view-resources" class="view hidden">
-        <div class="atlas-header">
-          <div class="atlas-title-group">
-            <h1>FIELD ASSETS</h1>
-            <div class="sub-loc">EQUIPMENT INVENTORY & DEPLOYED TEAMS</div>
-          </div>
-        </div>
-
-        <div class="wizard-grid">
-          <div>
-            <h3
-              style="
-                margin-bottom: 1rem;
-                font-size: 1.1rem;
-                color: var(--stone);
-              "
-            >
-              EQUIPMENT DEPOTS
-            </h3>
-            <table class="ledger-table">
-              <thead>
-                <tr>
-                  <th>ASSET NAME</th>
-                  <th>TYPE</th>
-                  <th>DEPOT</th>
-                  <th>STATUS</th>
-                </tr>
-              </thead>
-              <tbody id="res-equipment-body"></tbody>
-            </table>
-          </div>
-
-          <div>
-            <h3
-              style="
-                margin-bottom: 1rem;
-                font-size: 1.1rem;
-                color: var(--stone);
-              "
-            >
-              FIELD TEAMS
-            </h3>
-            <table class="ledger-table">
-              <thead>
-                <tr>
-                  <th>MEMBER</th>
-                  <th>ROLE</th>
-                  <th>BASE</th>
-                  <th>STATUS</th>
-                </tr>
-              </thead>
-              <tbody id="res-teams-body"></tbody>
-            </table>
-          </div>
-        </div>
+      <div class="form-field">
+        <label>Simulation mode</label>
+        <select id="np-sim-mode">
+          <option value="HAPPY_PATH">Normal operation (permit approved)</option>
+          <option value="FORCE_REJECT">Simulate permit rejection (triggers compensation)</option>
+        </select>
       </div>
+      <button class="btn primary-btn" id="btn-analyze" onclick="analyzeNewProject()">
+        Run spatial analysis
+      </button>
+      <div id="analysis-result" class="hidden" style="margin-top: 1.5rem; border-top: 1px solid var(--border-medium); padding-top: 1rem;"></div>
+    </div>
 
-      <!-- System Console -->
-      <div id="view-system" class="view hidden">
-        <div class="atlas-header">
-          <div class="atlas-title-group">
-            <h1>SYSTEM CONSOLE</h1>
-            <div class="sub-loc">EVENT BUS & INFRASTRUCTURE HEALTH</div>
-          </div>
-        </div>
-
-        <div
-          class="field-allocation-matrix"
-          id="sys-health-grid"
-          style="margin-bottom: 2rem"
-        ></div>
-
-        <div class="mono-meta" style="margin-bottom: 0.5rem">
-          LIVE DISTRIBUTED EVENT STREAM
-        </div>
-        <div id="sys-stream" class="tech-log-pre" style="height: 350px"></div>
+    <div style="height: 480px; border: 1px solid var(--border-medium); position: relative;">
+      <div style="position: absolute; bottom: 10px; left: 10px; z-index: 1000; background: rgba(18, 23, 15, 0.85); padding: 6px 12px; font-size: 12px; color: var(--text-secondary); border: 1px solid var(--border-medium); pointer-events: none;">
+        Click anywhere on map to pick coordinates
       </div>
-    </main>
+      <div id="new-project-map"></div>
+    </div>
+  </div>
+</div>
 
-    <footer
-      style="
-        border-top: 1px solid var(--border-medium);
-        padding: 2.5rem;
-        text-align: center;
-        color: var(--stone);
-        font-size: 0.85rem;
-        margin-top: 2rem;
-      "
-    >
-      <div
-        style="
-          font-family: &quot;Garet&quot;, sans-serif;
-          letter-spacing: 0.1em;
-          margin-bottom: 0.5rem;
-          color: var(--parchment-muted);
-        "
-      >
-        ECOTONE ATLAS &copy; 2026
+<div id="view-project-detail" class="view hidden">
+  <div class="project-editorial-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+      <h1 id="pd-title">Operation detail</h1>
+      <div class="editorial-meta-row">
+        <span id="pd-location-meta"></span>
+        <span id="pd-status-tag"></span>
       </div>
+    </div>
+    <button id="pd-delete-btn" class="btn secondary-btn" style="border-color: var(--terracotta); color: var(--terracotta); margin-top: 0.5rem;">
+      Delete expedition
+    </button>
+  </div>
+
+  <div class="horizontal-saga" id="pd-saga-viz"></div>
+  <div class="field-allocation-matrix" id="pd-allocation-matrix"></div>
+
+  <div class="full-map-wrap" style="height: 400px">
+    <div id="detail-map"></div>
+  </div>
+
+  <div style="margin-top: 2rem">
+    <div class="text-label" style="margin-bottom: 0.5rem">Saga event log</div>
+    <div id="pd-event-log-container" class="tech-log-pre"></div>
+  </div>
+</div>
+
+<div id="view-projects" class="view hidden">
+  <div class="page-hero">
+    <div>
+      <div class="page-eyebrow">Multi-site campaigns · active &amp; planned</div>
+      <h1 class="page-title">Expeditions</h1>
+    </div>
+    <div class="pixel-mosaic" id="mosaic-expeditions"></div>
+  </div>
+  <div id="expedition-board">
+  </div>
+</div>
+
+<div id="view-resources" class="view hidden">
+  <div class="page-hero">
+    <div>
+      <div class="page-eyebrow">Equipment inventory · deployed teams</div>
+      <h1 class="page-title">Field Assets</h1>
+    </div>
+    <div class="pixel-mosaic" id="mosaic-assets"></div>
+  </div>
+
+  <div>
+    <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem;">
+      <select id="asset-filter-type" onchange="applyAssetFilters()" class="overview-filter-bar" style="background: var(--bark); border: 1px solid var(--border-medium); color: var(--text-secondary); padding: 0.3rem 0.5rem; font-family: 'Public Sans', sans-serif; font-size: 0.8rem;">
+        <option value="">All types</option>
+        <option value="DRONE">Drone</option>
+        <option value="SEQUENCER">Sequencer</option>
+        <option value="RADAR">Radar</option>
+        <option value="VEHICLE">Vehicle</option>
+      </select>
+      <select id="asset-filter-status" onchange="applyAssetFilters()" style="background: var(--bark); border: 1px solid var(--border-medium); color: var(--text-secondary); padding: 0.3rem 0.5rem; font-family: 'Public Sans', sans-serif; font-size: 0.8rem;">
+        <option value="">All status</option>
+        <option value="AVAILABLE">Available</option>
+        <option value="RESERVED">Reserved</option>
+      </select>
+    </div>
+    <div class="asset-grid" id="asset-grid"></div>
+    <div style="margin-top: 2.5rem; border-top: 1px solid var(--border-medium); padding-top: 1.5rem;">
+      <h3 style="margin-bottom: 1rem; font-size: 1rem;">Field teams</h3>
+      <table class="ledger-table">
+        <thead><tr><th>Member</th><th>Role</th><th>Specialty</th><th>Base</th><th>Status</th></tr></thead>
+        <tbody id="res-teams-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="view-system" class="view hidden">
+  <div class="page-hero">
+    <div>
+      <div class="page-eyebrow">Saga orchestration · observability layer</div>
+      <h1 class="page-title">System Console</h1>
+    </div>
+    <div class="pixel-mosaic" id="mosaic-console"></div>
+  </div>
+
+  <div class="text-label" style="margin-bottom: 0.75rem">Event bus health</div>
+  <div class="topic-grid" id="topic-grid"></div>
+
+  <div class="text-label" style="margin-bottom: 0.75rem">Saga flow</div>
+  <div class="saga-flow-viz" id="saga-flow-viz">
+    <select id="saga-flow-select" onchange="loadSagaFlow()">
+      <option value="">Select an operation to visualize its saga flow</option>
+    </select>
+    <div class="saga-flow-nodes" id="saga-flow-nodes"></div>
+  </div>
+
+  <div class="text-label" style="margin-bottom: 0.5rem">Event stream</div>
+  <div id="sys-stream" class="tech-log-pre" style="height: 300px; overflow-y: auto;"></div>
+</div>
+
+</main>
+
+<footer style="border-top: 1px solid var(--border-medium); padding: 2rem 2.5rem; text-align: center; color: var(--text-secondary); font-size: 13px; margin-top: 2rem;">
+  <div style="font-family: 'Fraunces', serif; font-style: italic; font-variation-settings: 'SOFT' 0, 'WONK' 1; font-size: 1rem; color: var(--parchment);">Ecotone Atlas &copy; 2026</div>
+</footer>
+
+<div class="saga-drawer-overlay" id="saga-drawer-overlay" onclick="closeSagaDrawer(event)">
+  <div class="saga-drawer" id="saga-drawer">
+    <div class="saga-drawer-header">
       <div>
-        GEOSPATIAL ORCHESTRATION FOR CONSERVATION AND HERITAGE FIELD OPERATIONS
+        <div style="font-family: 'Fraunces', serif; font-style: italic; font-variation-settings: 'SOFT' 0, 'WONK' 1; font-size: 1.1rem; color: var(--parchment);" id="drawer-title">Operation detail</div>
+        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 0.2rem;" id="drawer-subtitle">Saga orchestration timeline</div>
       </div>
-    </footer>
+      <button class="saga-drawer-close" onclick="closeSagaDrawer(null)">✕</button>
+    </div>
+    <div class="saga-drawer-body" id="drawer-body"></div>
+  </div>
+</div>
 
-    <script src="app.js?v=8"></script>
-  </body>
+
+
+<script src="app.js?v=1012"></script>
+</body>
 </html>

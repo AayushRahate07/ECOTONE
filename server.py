@@ -282,50 +282,54 @@ class AegisRequestHandler(SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(res_data).encode("utf-8"))
 
         if parsed.path == "/api/projects/analyze":
-            lat = float(data.get("site_lat", 17.6805))
-            lon = float(data.get("site_lon", 74.0183))
-            req_eq = data.get("required_equipment", ["DRONE"])
-            budget = float(data.get("budget_requested", 350000.0))
-            
-            with resource_db.begin() as tx:
-                rows = tx.fetchall("SELECT resource_id, name, resource_type, depot_name, lat, lon, battery_pct, current_workload, hourly_cost FROM resources WHERE status = 'AVAILABLE';")
-            
-            candidates = []
-            total_cost = 0.0
-            for r_id, r_name, r_type, depot, r_lat, r_lon, battery, workload, cost in rows:
-                if r_type not in req_eq:
-                    continue
-                dist = haversine_distance_km(lat, lon, r_lat, r_lon)
-                travel_hours = dist / 50.0
-                score = calculate_composite_score(dist, travel_hours, battery, workload, 1.2)
-                candidates.append({
-                    "resource_id": r_id, "name": r_name, "resource_type": r_type, "depot_name": depot,
-                    "dist_km": round(dist, 1), "battery_pct": battery,
-                    "workload": workload, "score": round(score, 2), "hourly_cost": cost
+            try:
+                lat = float(data.get("site_lat") or 17.6805)
+                lon = float(data.get("site_lon") or 74.0183)
+                req_eq = data.get("required_equipment") or ["DRONE"]
+                budget = float(data.get("budget_requested") or 350000.0)
+                
+                with resource_db.begin() as tx:
+                    rows = tx.fetchall("SELECT resource_id, name, resource_type, depot_name, lat, lon, battery_pct, current_workload, hourly_cost FROM resources WHERE status = 'AVAILABLE';")
+                
+                candidates = []
+                total_cost = 0.0
+                for r_id, r_name, r_type, depot, r_lat, r_lon, battery, workload, cost in rows:
+                    if r_type not in req_eq:
+                        continue
+                    dist = haversine_distance_km(lat, lon, r_lat, r_lon)
+                    travel_hours = dist / 50.0
+                    score = calculate_composite_score(dist, travel_hours, battery, workload, 1.2)
+                    candidates.append({
+                        "resource_id": r_id, "name": r_name, "resource_type": r_type, "depot_name": depot,
+                        "dist_km": round(dist, 1), "battery_pct": battery,
+                        "workload": workload, "score": round(score, 2), "hourly_cost": cost
+                    })
+                    total_cost += cost
+                
+                candidates.sort(key=lambda x: x["score"], reverse=True)
+
+                # Check spatial constraints
+                site_polygon = data.get("site_polygon", None)
+                if site_polygon and len(site_polygon) > 0 and isinstance(site_polygon[0], list) and isinstance(site_polygon[0][0], list):
+                    site_polygon = site_polygon[0]
+                
+                violated = resource_service.check_spatial_constraints(lat, lon, site_polygon)
+
+                send_json({
+                    "status": "SUCCESS",
+                    "recommended_resources": candidates[:len(req_eq)],
+                    "all_candidates": candidates,
+                    "spatial_restrictions_clear": len(violated) == 0,
+                    "spatial_violations": violated,
+                    "equipment_available": len(candidates) >= len(req_eq),
+                    "estimated_cost": total_cost,
+                    "within_budget": total_cost <= budget
                 })
-                total_cost += cost
-            
-            candidates.sort(key=lambda x: x["score"], reverse=True)
-
-            # Check spatial constraints
-            with resource_db.begin() as tx:
-                constraints = tx.fetchall("SELECT name, constraint_type, min_lat, max_lat, min_lon, max_lon FROM spatial_constraints;")
-            
-            violated = []
-            for c_name, c_type, min_lat, max_lat, min_lon, max_lon in constraints:
-                if min_lat <= lat <= max_lat and min_lon <= lon <= max_lon:
-                    violated.append({"name": c_name, "type": c_type})
-
-            send_json({
-                "status": "SUCCESS",
-                "recommended_resources": candidates[:len(req_eq)],
-                "all_candidates": candidates,
-                "spatial_restrictions_clear": len(violated) == 0,
-                "spatial_violations": violated,
-                "equipment_available": len(candidates) >= len(req_eq),
-                "estimated_cost": total_cost,
-                "within_budget": total_cost <= budget
-            })
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                send_json({"error": str(e)}, 500)
+            return
             return
 
         if parsed.path == "/api/projects/initiate":
@@ -333,13 +337,13 @@ class AegisRequestHandler(SimpleHTTPRequestHandler):
             regulatory_gateway.set_simulation_mode(mode)
 
             project = project_service.create_project(
-                title=data.get("title", "Western Ghats Survey"),
-                description=data.get("description", "eDNA biodiversity survey"),
-                location_name=data.get("location_name", "Satara Corridor"),
-                site_lat=float(data.get("site_lat", 17.6805)),
-                site_lon=float(data.get("site_lon", 74.0183)),
-                budget_requested=float(data.get("budget_requested", 350000.0)),
-                required_equipment=data.get("required_equipment", ["DRONE", "SEQUENCER"]),
+                title=data.get("title") or "Unnamed Field Operation",
+                description=data.get("description") or "Routine field survey",
+                location_name=data.get("location_name") or "Unknown Location",
+                site_lat=float(data.get("site_lat") or 17.6),
+                site_lon=float(data.get("site_lon") or 74.0),
+                budget_requested=float(data.get("budget_requested") or 350000.0),
+                required_equipment=data.get("required_equipment") or ["DRONE"],
                 required_team=data.get("required_team", ["Lead Ecologist", "Drone Operator"]),
                 priority=data.get("priority", "HIGH")
             )
