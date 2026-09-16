@@ -29,13 +29,24 @@ If an operation encounters a failure during execution (such as an environmental 
 
 ---
 
-## ⚙️ System Capabilities
-
-| 🗺️ Geospatial Scoring & Constraints | 🔄 Saga Orchestration |
-|---|---|
-| **Composite Scoring:** Evaluates asset distance, transport time, battery level, workload, and priority.<br><br>**Spatial Boundaries:** PostGIS `ST_Intersects` and bounding-box queries for restricted zones.<br><br>**Geodesic Distance:** Haversine formula routing for remote outpost logistics. | **Forward Execution:** 4-stage pipeline (`FUNDING` ➜ `RESOURCES` ➜ `TEAM` ➜ `PERMITS` ➜ `ACTIVE`).<br><br>**Compensation Cascade:** Parallel rollback of locked grants, drones, and personnel on rejection.<br><br>**Idempotency Claims:** Deduplication via `INSERT OR IGNORE INTO processed_events`. |
-| 📦 **Transactional Outbox** | 🔍 **System Observability** |
-| **Atomic DB Writes:** Domain updates and outbox payloads committed in one transaction block.<br><br>**At-Least-Once Delivery:** Worker process polls `PENDING` outbox rows and publishes to broker.<br><br>**Crash Recovery:** Un-sent outbox events survive crashes and automatically replay on restart. | **Saga Flow Visualizer:** 6-stage timeline renderer showing step execution & failure states.<br><br>**Service Trace Matrix:** Execution step log annotated with Operation IDs (`OP_ID: 3afcc79d`).<br><br>**Live Event Stream:** Real-time event log with instant filtering by operation ID and event type. |
+<table width="100%" cellpadding="10" cellspacing="0">
+  <tr>
+    <td><b>🗺️ Geospatial Scoring & Constraints</b></td>
+    <td><b>🔄 Saga Orchestration</b></td>
+  </tr>
+  <tr>
+    <td>Composite scoring, spatial boundaries, and geodesic distance.</td>
+    <td>Forward execution, compensation cascade, and idempotency claims.</td>
+  </tr>
+  <tr>
+    <td><b>📦 Transactional Outbox</b></td>
+    <td><b>🔍 System Observability</b></td>
+  </tr>
+  <tr>
+    <td>Atomic DB writes, at-least-once delivery, and crash recovery.</td>
+    <td>Saga flow visualizer, service trace matrix, and live event stream.</td>
+  </tr>
+</table>
 
 <br />
 
