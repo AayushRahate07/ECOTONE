@@ -31,41 +31,40 @@ If an operation encounters a failure during execution (such as an environmental 
 
 ## ⚙️ System Capabilities
 
-<table width="100%" cellpadding="12" cellspacing="0">
+<table width="100%" cellpadding="16" cellspacing="0" style="border-collapse: separate; border-spacing: 12px;">
   <tr>
-    <td width="50%" valign="top">
-      <h3 align="center"> 🗺️ Geospatial Scoring & Constraints</h3>
+    <td width="50%" valign="top" style="padding: 16px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.02); border-radius: 8px;">
+      <h3 align="center">🗺️ Geospatial Scoring & Constraints</h3>
       <ul>
-        <li><b>Composite Scoring:</b> Evaluates asset distance, transport hours, battery level, workload, and priority weight.</li>
-        <li><b>Spatial Constraints:</b> Integrates PostGIS <code>ST_Intersects</code> and bounding-box queries to check restricted zones.</li>
-        <li><b>Distance Calculation:</b> Geodesic calculations using the Haversine formula.</li>
-        <li></li>
+        <li><b>Composite Scoring:</b> Evaluates asset distance, transport time, battery level, workload, and priority.</li>
+        <li><b>Spatial Boundaries:</b> PostGIS <code>ST_Intersects</code> and bounding-box queries for restricted zones.</li>
+        <li><b>Geodesic Distance:</b> Haversine formula routing for remote outpost logistics.</li>
       </ul>
     </td>
-    <td width="50%" valign="top">
-      <h3 align="center"> 🔄 Saga Orchestration</h3>
+    <td width="50%" valign="top" style="padding: 16px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.02); border-radius: 8px;">
+      <h3 align="center">🔄 Saga Orchestration</h3>
       <ul>
-        <li><b>4-Step Forward Flow:</b> <code>FUNDING</code> ➔ <code>RESOURCES</code> ➔ <code>TEAM</code> ➔ <code>PERMITS</code> ➔ <code>ACTIVATED</code>.</li>
-        <li><b>Compensation Rollback:</b> Parallel release of grants, drones, and personnel upon permit rejection.</li>
-        <li><b>Idempotency:</b> Claim checks via <code>INSERT OR IGNORE INTO processed_events</code>.</li>
-        <li></li>
+        <li><b>Forward Execution:</b> 4-stage pipeline (<code>FUNDING</code> ➔ <code>RESOURCES</code> ➔ <code>TEAM</code> ➔ <code>PERMITS</code> ➔ <code>ACTIVE</code>).</li>
+        <li><b>Compensation Cascade:</b> Parallel rollback of locked grants, drones, and personnel on rejection.</li>
+        <li><b>Idempotency Claims:</b> Deduplication via <code>INSERT OR IGNORE INTO processed_events</code>.</li>
       </ul>
     </td>
   </tr>
   <tr>
-    <td width="50%" valign="top">
-      <h3 align="center"> 📦 Transactional Outbox</h3>
+    <td width="50%" valign="top" style="padding: 16px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.02); border-radius: 8px;">
+      <h3 align="center">📦 Transactional Outbox</h3>
       <ul>
-        <li><b>Atomic DB Writes:</b> Domain updates and outbox payloads committed in a single transaction block.</li>
-        <li><b>At-Least-Once Delivery:</b> Worker process polls <code>PENDING</code> rows and publishes to EventBus/Kafka.</li>
+        <li><b>Atomic DB Writes:</b> Domain updates and outbox payloads committed in one transaction block.</li>
+        <li><b>At-Least-Once Delivery:</b> Worker process polls <code>PENDING</code> outbox rows and publishes to broker.</li>
+        <li><b>Crash Recovery:</b> Un-sent outbox events survive crashes and automatically replay on restart.</li>
       </ul>
     </td>
-    <td width="50%" valign="top">
-      <h3 align="center"> 🔍 System Observability</h3>
+    <td width="50%" valign="top" style="padding: 16px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.02); border-radius: 8px;">
+      <h3 align="center">🔍 System Observability</h3>
       <ul>
-        <li><b>Saga Flow Visualizer:</b> Timeline renderer showing step completion and failure states.</li>
+        <li><b>Saga Flow Visualizer:</b> 6-stage timeline renderer showing step execution & failure states.</li>
         <li><b>Service Trace Matrix:</b> Execution step log annotated with Operation IDs (<code>OP_ID: 3afcc79d</code>).</li>
-        <li><b>Event Stream:</b> Audit log with event filtering by operation and type.</li>
+        <li><b>Live Event Stream:</b> Real-time event log with instant filtering by operation ID and event type.</li>
       </ul>
     </td>
   </tr>
