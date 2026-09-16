@@ -11,7 +11,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-  <link rel="stylesheet" href="styles.css?v=1012" />
+  <link rel="stylesheet" href="styles.css?v=1014" />
 </head>
 <body>
 <header class="top-nav">
@@ -144,6 +144,10 @@
           <label><input type="checkbox" value="VEHICLE" checked /> Vehicle</label>
         </div>
       </div>
+            <div class="form-field">
+        <label>Volunteers count</label>
+        <input type="number" id="np-volunteers" value="0" min="0" step="1" placeholder="e.g. 12" />
+      </div>
       <div class="form-field">
         <label>Grant budget (INR)</label>
         <input type="number" id="np-budget" value="350000" />
@@ -219,23 +223,27 @@
   </div>
 
   <div>
-    <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem;">
-      <select id="asset-filter-type" onchange="applyAssetFilters()" class="overview-filter-bar" style="background: var(--bark); border: 1px solid var(--border-medium); color: var(--text-secondary); padding: 0.3rem 0.5rem; font-family: 'Public Sans', sans-serif; font-size: 0.8rem;">
+    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center;">
+      <select id="asset-filter-type" onchange="applyAssetFilters()" class="asset-filter-select">
         <option value="">All types</option>
         <option value="DRONE">Drone</option>
         <option value="SEQUENCER">Sequencer</option>
         <option value="RADAR">Radar</option>
         <option value="VEHICLE">Vehicle</option>
       </select>
-      <select id="asset-filter-status" onchange="applyAssetFilters()" style="background: var(--bark); border: 1px solid var(--border-medium); color: var(--text-secondary); padding: 0.3rem 0.5rem; font-family: 'Public Sans', sans-serif; font-size: 0.8rem;">
+      <select id="asset-filter-status" onchange="applyAssetFilters()" class="asset-filter-select">
         <option value="">All status</option>
         <option value="AVAILABLE">Available</option>
         <option value="RESERVED">Reserved</option>
       </select>
+      <button class="btn primary-btn" onclick="openAddAssetModal()" style="margin-left:auto; font-size:0.75rem; padding:0.35rem 0.9rem; white-space:nowrap;">+ ADD ASSET</button>
     </div>
     <div class="asset-grid" id="asset-grid"></div>
-    <div style="margin-top: 2.5rem; border-top: 1px solid var(--border-medium); padding-top: 1.5rem;">
-      <h3 style="margin-bottom: 1rem; font-size: 1rem;">Field teams</h3>
+    <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-medium); padding-top: 1rem;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+        <h3 style="font-size:1rem; margin:0;">Field Teams</h3>
+        <button class="btn" onclick="openAddMemberModal()" style="font-size:0.7rem; padding:0.3rem 0.75rem; border:1px solid var(--border-medium); color:var(--stone);">+ ADD MEMBER</button>
+      </div>
       <table class="ledger-table">
         <thead><tr><th>Member</th><th>Role</th><th>Specialty</th><th>Base</th><th>Status</th></tr></thead>
         <tbody id="res-teams-body"></tbody>
@@ -289,6 +297,103 @@
 
 
 
-<script src="app.js?v=1012"></script>
+<script src="app.js?v=1014"></script>
+
+  <!-- Add Asset Modal -->
+  <div id="add-asset-modal" style="display:none; position:fixed; inset:0; background: #00000000; z-index:9000; align-items:center; justify-content:center;">
+    <div style="background:#18201a; border:1px solid var(--border-medium); border-radius:6px; padding:1.75rem 2rem; width:420px; max-width:95vw;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+        <h3 style="margin:0; font-size:0.95rem; letter-spacing:0.05em; font-family: 'Geologica';  font-style: normal;">Add Asset</h3>
+        <button onclick="closeAddAssetModal()" style="background:none; border:none; color:var(--stone); font-size:1.25rem; cursor:pointer; line-height:1;">&#215;</button>
+      </div>
+      <form id="add-asset-form" onsubmit="event.preventDefault(); submitAddAsset();">
+        <div class="modal-field-group">
+          <label class="modal-label">Asset Name *</label>
+          <input id="na-name" class="modal-input" type="text" placeholder="LiDAR Drone Gamma" required>
+        </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Asset Type *</label>
+          <select id="na-type" class="modal-input" required>
+            <option value="">Select type...</option>
+            <option value="DRONE">Drone</option>
+            <option value="SEQUENCER">Sequencer</option>
+            <option value="RADAR">Radar</option>
+            <option value="VEHICLE">Vehicle</option>
+          </select>
+        </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Asset ID *</label>
+          <input id="na-id" class="modal-input" type="text" placeholder="DRN-LDR-003" required>
+        </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Base / Depot *</label>
+          <input id="na-base" class="modal-input" type="text" placeholder="Pune Depot" required>
+        </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Status *</label>
+          <select id="na-status" class="modal-input" required>
+            <option value="">Select status...</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="RESERVED">Reserved</option>
+          </select>
+        </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Rate / Hour (&#8377;)</label>
+          <input id="na-rate" class="modal-input" type="number" min="0" placeholder="250">
+        </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Notes</label>
+          <input id="na-notes" class="modal-input" type="text" placeholder="Optional notes">
+        </div>
+        <div id="add-asset-error" style="color:#d46565; font-size:0.75rem; min-height:1.2em; margin-bottom:0.5rem;"></div>
+        <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+          <button type="button" class="btn" onclick="closeAddAssetModal()" style="font-size:0.75rem;">Cancel</button>
+          <button type="submit" class="btn primary-btn" style="font-size:0.75rem;">Add Asset</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Member Modal -->
+  <div id="add-member-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:9000; align-items:center; justify-content:center;">
+    <div style="background:var(--bark); border:1px solid var(--border-medium); border-radius:6px; padding:1.75rem 2rem; width:420px; max-width:95vw;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+        <h3 style="margin:0; font-size:0.95rem; letter-spacing:0.05em;">ADD TEAM MEMBER</h3>
+        <button onclick="closeAddMemberModal()" style="background:none; border:none; color:var(--stone); font-size:1.25rem; cursor:pointer; line-height:1;">&#215;</button>
+      </div>
+      <form id="add-member-form" onsubmit="event.preventDefault(); submitAddMember();">
+        <div class="modal-field-group">
+          <label class="modal-label">Name *</label>
+          <input id="nm-name" class="modal-input" type="text" placeholder="Dr. Aris Thorne" required>
+        </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Role *</label>
+          <input id="nm-role" class="modal-input" type="text" placeholder="Lead Ecologist" required>
+        </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Specialty</label>
+          <input id="nm-specialty" class="modal-input" type="text" placeholder="eDNA Sequencing">
+        </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Base *</label>
+          <input id="nm-base" class="modal-input" type="text" placeholder="Pune" required>
+        </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Status *</label>
+          <select id="nm-status" class="modal-input" required>
+            <option value="">Select status...</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="ASSIGNED">Assigned</option>
+          </select>
+        </div>
+        <div id="add-member-error" style="color:#d46565; font-size:0.75rem; min-height:1.2em; margin-bottom:0.5rem;"></div>
+        <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+          <button type="button" class="btn" onclick="closeAddMemberModal()" style="font-size:0.75rem;">Cancel</button>
+          <button type="submit" class="btn primary-btn" style="font-size:0.75rem;">Add Member</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </body>
 </html>

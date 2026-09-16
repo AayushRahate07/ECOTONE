@@ -1,0 +1,187 @@
+async function loadResourcesData() {
+  try {
+    const res = await fetch(`${API_BASE}/resources`);
+    const data = await res.json();
+    _allResources = data.resources || [];
+
+    renderAssetGrid(_allResources);
+
+    // Teams table
+    document.getElementById('res-teams-body').innerHTML = (data.team_members || []).map(t => `
+      <tr>
+        <td style="font-weight: 600;">${t.name}</td>
+        <td style="color: var(--stone);">${t.role}</td>
+        <td style="color: var(--stone);">${t.specialty}</td>
+        <td>${t.location_base}</td>
+        <td><span class="status-tag ${t.availability_status === 'AVAILABLE' ? 'active' : 'pending'}" style="font-size:0.7rem;">● ${t.availability_status}</span></td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    console.error('Error loading field assets:', e);
+  }
+}
+
+function renderAssetGrid(resources) {
+  const grid = document.getElementById('asset-grid');
+  if (!grid) return;
+
+  const typeIcons = { DRONE: '🛸', SEQUENCER: '🧬', RADAR: '📡', VEHICLE: '🚙' };
+  const lifecycleSteps = ['AVAILABLE', 'RESERVED', 'DEPLOYED', 'RELEASED'];
+
+  grid.innerHTML = resources.map(r => {
+    const icon = typeIcons[r.resource_type] || '⚙';
+    const batteryColor = r.battery_pct > 70 ? '#3FA66E' : r.battery_pct > 30 ? '#C97B4A' : '#C24F4F';
+    const statusCls = r.status === 'AVAILABLE' ? 'active' : 'pending';
+    const currentLifecycleIdx = lifecycleSteps.indexOf(r.status);
+
+    const stepperHTML = lifecycleSteps.map((step, idx) => {
+      let cls = '';
+      if (idx < currentLifecycleIdx) cls = 'done';
+      else if (idx === currentLifecycleIdx) cls = 'current';
+      return `<div style="flex:1;"><div class="lifecycle-step ${cls}"></div><div class="lifecycle-step-label">${step}</div></div>`;
+    }).join('');
+
+    return `
+      <div class="asset-card">
+        <div class="asset-card-header">
+          <div>
+            <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">${icon}</div>
+            <div class="asset-name">${r.name}</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--stone); margin-top: 0.15rem;">${r.depot_name}</div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem;">
+            <span class="asset-type-badge">${r.resource_type}</span>
+            <span class="status-tag ${statusCls}" style="font-size:0.65rem;">● ${r.status}</span>
+          </div>
+        </div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--stone); display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+          <span>Battery</span><span style="color:${batteryColor};">${r.battery_pct}%</span>
+        </div>
+        <div class="battery-bar"><div class="battery-fill" style="width:${r.battery_pct}%; background:${batteryColor};"></div></div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--stone); margin-bottom: 0.4rem;">Workload: ${r.current_workload || 0}/10 · ₹${r.hourly_cost}/hr</div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--stone); margin-bottom: 0.3rem; text-transform: uppercase;">Reservation Lifecycle</div>
+        <div class="lifecycle-stepper" style="display: flex; gap: 0.25rem; align-items: flex-start;">${stepperHTML}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function applyAssetFilters() {
+  const typeFilter = document.getElementById('asset-filter-type')?.value || '';
+  const statusFilter = document.getElementById('asset-filter-status')?.value || '';
+  let filtered = _allResources;
+  if (typeFilter) filtered = filtered.filter(r => r.resource_type === typeFilter);
+  if (statusFilter) filtered = filtered.filter(r => r.status === statusFilter);
+  renderAssetGrid(filtered);
+}
+
+// ── SYSTEM CONSOLE ─────────────────────────────────────────────────────
+
+async function loadSystemHealth() {
+  try {
+    const [sysRes, projectsRes] = await Promise.all([
+      fetch(`${API_BASE}/system/events`),
+      fetch(`${API_BASE}/projects`),
+    ]);
+    const data = await sysRes.json();
+    const projects = await projectsRes.json();
+    const m = data.metrics || {};
+
+    // Topic health tiles
+    const topics = [
+      { name: 'project.created', count: m.total_projects || 0 },
+      { name: 'funds.reserved', count: m.active_projects || 0 },
+      { name: 'resources.reserved', count: m.active_projects || 0 },
+      { name: 'team.assigned', count: m.active_projects || 0 },
+      { name: 'permit.approved', count: m.active_projects || 0 },
+      { name: 'permit.rejected', count: m.compensating_projects || 0 },
+      { name: 'project.activated', count: m.active_projects || 0 },
+      { name: 'project.cancelled', count: m.cancelled_projects || 0 },
+      { name: 'resources.released', count: m.compensating_projects || 0 },
+      { name: 'funds.released', count: m.compensating_projects || 0 },
+    ];
+
+    const topicGrid = document.getElementById('topic-grid');
+    if (topicGrid) {
+      topicGrid.innerHTML = topics.map(t => {
+        const isHealthy = t.count >= 0;
+        const dotCls = t.count > 0 ? 'healthy' : 'warn';
+        return `
+          <div class="topic-tile">
+            <div class="topic-name">aegis.event.${t.name}</div>
+            <div class="topic-status">
+              <div class="topic-dot ${dotCls}"></div>
+              <span class="topic-status-text">${t.count > 0 ? t.count + ' events' : 'Idle'}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Populate saga flow select
+    const sagaSelect = document.getElementById('saga-flow-select');
+    if (sagaSelect && projects.length) {
+      const existingOptions = Array.from(sagaSelect.options).map(o => o.value);
+      projects.forEach(p => {
+        if (!existingOptions.includes(p.project_id)) {
+          const opt = document.createElement('option');
+          opt.value = p.project_id;
+          opt.textContent = `${p.title} — ${p.status}`;
+          sagaSelect.appendChild(opt);
+        }
+      });
+      // Store projects for flow rendering
+      window._consoleProjects = projects;
+    }
+
+    // Event stream
+    const events = data.recent_events || [];
+    const stream = document.getElementById('sys-stream');
+    if (stream) {
+      if (events.length) {
+        stream.innerHTML = events.map(e => {
+          const ts = (e.timestamp || '').substring(11, 19);
+          const type = (e.event_type || '').padEnd(40);
+          return `<div style="margin-bottom: 0.2rem; font-size: 0.75rem;"><span style="color: var(--moss-light);">[${ts}]</span> <span style="color: var(--parchment);">${e.event_type}</span> <span style="color: var(--stone);">saga:${e.saga_id || 'N/A'}</span></div>`;
+        }).join('');
+      } else {
+        stream.innerHTML = '<div style="color: var(--stone); font-size: 0.8rem; padding: 1rem;">No events in stream. Run seed_operations.py and restart server to populate.</div>';
+      }
+    }
+  } catch (e) {
+    console.error('System console error:', e);
+  }
+}
+
+function loadSagaFlow() {
+  const select = document.getElementById('saga-flow-select');
+  const pid = select?.value;
+  const projects = window._consoleProjects || [];
+  const p = projects.find(x => x.project_id === pid);
+  if (!p) return;
+
+  const isCompensating = p.status === 'COMPENSATING' || p.status === 'CANCELLED';
+  const nodes = [
+    { name: 'PROJECT\nCREATED', status: 'done' },
+    { name: 'FUNDS\nRESERVED', status: 'done' },
+    { name: 'RESOURCES\nRESERVED', status: p.status === 'DRAFT' ? 'current' : 'done' },
+    { name: 'TEAM\nASSIGNED', status: p.status === 'DRAFT' ? 'pending' : 'done' },
+    { name: 'PERMIT\nREQUESTED', status: p.permit_status === 'REJECTED' ? 'failed' : (p.status === 'ACTIVE' ? 'done' : 'current') },
+    { name: p.status === 'ACTIVE' ? 'ACTIVATED' : (isCompensating ? 'CANCELLED' : 'PENDING'), status: p.status === 'ACTIVE' ? 'done' : (isCompensating ? 'failed' : 'pending') },
+  ];
+
+  const nodesEl = document.getElementById('saga-flow-nodes');
+  if (!nodesEl) return;
+
+  nodesEl.innerHTML = nodes.map((node, idx) => {
+    const arrowCls = isCompensating ? 'failed' : (node.status === 'done' ? 'active' : '');
+    return `
+      <div class="saga-flow-node">
+        <div class="saga-flow-node-box ${node.status}">
+          <div class="saga-flow-node-name">${node.name.replace('\n', '<br>')}</div>
+        </div>
+      </div>
+      ${idx < nodes.length - 1 ? `<div class="saga-flow-arrow ${arrowCls}">${isCompensating ? '←' : '→'}</div>` : ''}
+    `;
+  }).join('');
+}

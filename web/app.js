@@ -833,6 +833,8 @@ async function startProject() {
   const lon = document.getElementById("np-lon").value;
   const budget = document.getElementById("np-budget").value;
   const simMode = document.getElementById("np-sim-mode").value;
+  const volunteersVal = document.getElementById("np-volunteers")?.value;
+  const volunteers = volunteersVal ? Math.max(0, parseInt(volunteersVal, 10) || 0) : 0;
   const checkboxes = document.querySelectorAll(
     "#np-equipment-list input:checked",
   );
@@ -848,6 +850,7 @@ async function startProject() {
         site_lat: parseFloat(lat),
         site_lon: parseFloat(lon),
         budget_requested: parseFloat(budget),
+        volunteers: volunteers,
         required_equipment: reqEq,
         sim_mode: simMode,
       }),
@@ -900,6 +903,11 @@ async function loadProjectDetail(pid) {
                 <label>FIELD TEAM</label>
                 <div class="val">${(p.required_team || ["Ecology Lead"])[0]}</div>
                 <div class="sub">${p.team_status || "ASSIGNED"}</div>
+            </div>
+            <div class="matrix-cell">
+                <label>VOLUNTEERS</label>
+                <div class="val">${p.volunteers != null ? p.volunteers : 0}</div>
+                <div class="sub">FIELD PERSONNEL</div>
             </div>
             <div class="matrix-cell">
                 <label>REGULATORY PERMIT</label>
@@ -1129,42 +1137,33 @@ function renderAssetGrid(resources) {
   const grid = document.getElementById('asset-grid');
   if (!grid) return;
 
-  const typeIcons = { DRONE: '🛸', SEQUENCER: '🧬', RADAR: '📡', VEHICLE: '🚙' };
-  const lifecycleSteps = ['AVAILABLE', 'RESERVED', 'DEPLOYED', 'RELEASED'];
+  if (!resources || resources.length === 0) {
+    grid.innerHTML = '<div style="color:var(--stone); font-size:0.8rem; padding:1.5rem 0; grid-column:1/-1;">No assets match the current filters.</div>';
+    return;
+  }
 
   grid.innerHTML = resources.map(r => {
-    const icon = typeIcons[r.resource_type] || '⚙';
-    const batteryColor = r.battery_pct > 70 ? '#3FA66E' : r.battery_pct > 30 ? '#C97B4A' : '#C24F4F';
-    const statusCls = r.status === 'AVAILABLE' ? 'active' : 'pending';
-    const currentLifecycleIdx = lifecycleSteps.indexOf(r.status);
-
-    const stepperHTML = lifecycleSteps.map((step, idx) => {
-      let cls = '';
-      if (idx < currentLifecycleIdx) cls = 'done';
-      else if (idx === currentLifecycleIdx) cls = 'current';
-      return `<div style="flex:1;"><div class="lifecycle-step ${cls}"></div><div class="lifecycle-step-label">${step}</div></div>`;
-    }).join('');
-
+    const isAvailable = r.status === 'AVAILABLE';
+    const cardStatusCls = isAvailable ? 'status-available' : 'status-reserved';
+    const assetId = r.resource_id || r.asset_id || '—';
+    const rate = r.hourly_cost != null ? `₹${r.hourly_cost}/hr` : '—';
     return `
       <div class="asset-card">
-        <div class="asset-card-header">
-          <div>
-            <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">${icon}</div>
+        <div class="asset-card-body">
+          <div class="asset-card-header">
             <div class="asset-name">${r.name}</div>
-            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--stone); margin-top: 0.15rem;">${r.depot_name}</div>
           </div>
-          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem;">
-            <span class="asset-type-badge">${r.resource_type}</span>
-            <span class="status-tag ${statusCls}" style="font-size:0.65rem;">● ${r.status}</span>
+          <div><span class="asset-type-badge">${r.resource_type}</span></div>
+          <div class="asset-card-meta-grid">
+            <span class="asset-meta-label">ID</span>
+            <span class="asset-meta-value">${assetId}</span>
+            <span class="asset-meta-label">BASE</span>
+            <span class="asset-meta-value">${r.depot_name || '—'}</span>
+            <span class="asset-meta-label">RATE</span>
+            <span class="asset-meta-value">${rate}</span>
           </div>
         </div>
-        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--stone); display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
-          <span>Battery</span><span style="color:${batteryColor};">${r.battery_pct}%</span>
-        </div>
-        <div class="battery-bar"><div class="battery-fill" style="width:${r.battery_pct}%; background:${batteryColor};"></div></div>
-        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--stone); margin-bottom: 0.4rem;">Workload: ${r.current_workload || 0}/10 · ₹${r.hourly_cost}/hr</div>
-        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--stone); margin-bottom: 0.3rem; text-transform: uppercase;">Reservation Lifecycle</div>
-        <div class="lifecycle-stepper" style="display: flex; gap: 0.25rem; align-items: flex-start;">${stepperHTML}</div>
+        <div class="asset-bottom-status ${cardStatusCls}">${r.status}</div>
       </div>
     `;
   }).join('');
@@ -1288,4 +1287,111 @@ function loadSagaFlow() {
       ${idx < nodes.length - 1 ? `<div class="saga-flow-arrow ${arrowCls}">${isCompensating ? '←' : '→'}</div>` : ''}
     `;
   }).join('');
+}
+
+
+// ── FIELD ASSETS: Add Asset Modal Functions ───────────────────────────────────
+
+function openAddAssetModal() {
+  document.getElementById('add-asset-modal').style.display = 'flex';
+}
+
+function closeAddAssetModal() {
+  document.getElementById('add-asset-modal').style.display = 'none';
+  document.getElementById('add-asset-form').reset();
+  document.getElementById('add-asset-error').textContent = '';
+}
+
+function submitAddAsset() {
+  const name = document.getElementById('na-name').value.trim();
+  const type = document.getElementById('na-type').value.trim();
+  const assetId = document.getElementById('na-id').value.trim();
+  const base = document.getElementById('na-base').value.trim();
+  const status = document.getElementById('na-status').value.trim();
+  const rate = document.getElementById('na-rate').value.trim();
+  const notes = document.getElementById('na-notes').value.trim();
+  const errEl = document.getElementById('add-asset-error');
+
+  if (!name || !type || !assetId || !base || !status) {
+    errEl.textContent = 'Name, Type, Asset ID, Base, and Status are required.';
+    return;
+  }
+  const rateNum = rate ? parseFloat(rate) : null;
+  if (rate && isNaN(rateNum)) {
+    errEl.textContent = 'Rate must be a number.';
+    return;
+  }
+
+  // Check for duplicate Asset ID
+  const duplicate = _allResources.find(r => (r.resource_id || r.asset_id) === assetId);
+  if (duplicate) {
+    errEl.textContent = `Asset ID "${assetId}" already exists.`;
+    return;
+  }
+
+  const newAsset = {
+    resource_id: assetId,
+    asset_id: assetId,
+    name: name,
+    resource_type: type.toUpperCase(),
+    status: status.toUpperCase(),
+    depot_name: base,
+    hourly_cost: rateNum,
+    notes: notes,
+  };
+
+  _allResources.push(newAsset);
+  applyAssetFilters();
+  closeAddAssetModal();
+}
+
+// ── FIELD TEAMS: Add Member Modal Functions ───────────────────────────────────
+
+window._localTeamMembers = window._localTeamMembers || [];
+
+function openAddMemberModal() {
+  document.getElementById('add-member-modal').style.display = 'flex';
+}
+
+function closeAddMemberModal() {
+  document.getElementById('add-member-modal').style.display = 'none';
+  document.getElementById('add-member-form').reset();
+  document.getElementById('add-member-error').textContent = '';
+}
+
+function submitAddMember() {
+  const name = document.getElementById('nm-name').value.trim();
+  const role = document.getElementById('nm-role').value.trim();
+  const specialty = document.getElementById('nm-specialty').value.trim();
+  const base = document.getElementById('nm-base').value.trim();
+  const status = document.getElementById('nm-status').value.trim();
+  const errEl = document.getElementById('add-member-error');
+
+  if (!name || !role || !base || !status) {
+    errEl.textContent = 'Name, Role, Base, and Status are required.';
+    return;
+  }
+
+  const member = {
+    name, role, specialty, location_base: base,
+    availability_status: status.toUpperCase(),
+  };
+  window._localTeamMembers.push(member);
+  appendTeamMemberRow(member);
+  closeAddMemberModal();
+}
+
+function appendTeamMemberRow(t) {
+  const tbody = document.getElementById('res-teams-body');
+  if (!tbody) return;
+  const statusCls = t.availability_status === 'AVAILABLE' ? 'active' : 'pending';
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="font-weight:600;">${t.name}</td>
+    <td style="color:var(--stone);">${t.role}</td>
+    <td style="color:var(--stone);">${t.specialty || '—'}</td>
+    <td>${t.location_base}</td>
+    <td><span class="status-tag ${statusCls}" style="font-size:0.7rem;">● ${t.availability_status}</span></td>
+  `;
+  tbody.appendChild(tr);
 }

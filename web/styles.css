@@ -553,7 +553,7 @@ main {
 /* Field Allocation Matrix Row */
 .field-allocation-matrix {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 1.5rem;
   margin: 2rem 0;
 }
@@ -1106,71 +1106,174 @@ main {
 }
 
 /* Field Assets page */
+/* ── Compact Asset Cards (Field Assets) ─────────────────────────────────── */
 .asset-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.25rem;
-  margin-top: 1.5rem;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.85rem;
+  margin-top: 1rem;
 }
+
+@media (max-width: 1300px) {
+  .asset-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .asset-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
 .asset-card {
   border: 1px solid var(--border-medium);
   background: var(--surface-dark);
-  padding: 1.25rem;
+  border-radius: 4px;
   transition: border-color 0.15s ease;
+  min-height: 175px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  overflow: hidden;
 }
+
 .asset-card:hover {
   border-color: var(--moss-light);
 }
+
 .asset-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.15rem;
 }
+
 .asset-name {
   font-family: "Geologica", sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  font-weight: 600;
   color: var(--parchment);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 0.5rem;
 }
+
 .asset-type-badge {
   font-family: "IBM Plex Mono", monospace;
-  font-size: 0.6rem;
-  padding: 0.1rem 0.4rem;
+  font-size: 0.58rem;
+  padding: 0.1rem 0.35rem;
   border: 1px solid var(--border-medium);
   color: var(--stone);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  display: inline-block;
+  margin-bottom: 0.6rem;
 }
-.battery-bar {
-  height: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  margin: 0.5rem 0;
-  position: relative;
+
+.asset-card-meta-grid {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr;
+  gap: 0.25rem 0.5rem;
+  margin-top: auto;
 }
-.battery-fill {
-  height: 100%;
-  transition: width 0.8s ease;
-}
-.lifecycle-stepper {
-  display: flex;
-  gap: 0;
-  margin-top: 0.75rem;
-}
-.lifecycle-step {
-  flex: 1;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.08);
-}
-.lifecycle-step.done {
-  background: var(--moss-light);
-}
-.lifecycle-step.current {
-  background: var(--clay);
-}
-.lifecycle-step-label {
+
+.asset-meta-label {
   font-family: "IBM Plex Mono", monospace;
-  font-size: 0.55rem;
+  font-size: 0.6rem;
   color: var(--stone);
-  margin-top: 0.3rem;
-  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  align-self: center;
+}
+
+.asset-meta-value {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  color: var(--parchment);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asset-filter-select {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(16, 20, 16, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  height: 32px;
+  padding: 0 24px 0 12px;
+  color: #7b857b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%237b857b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 10px;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.asset-filter-select:hover,
+.asset-filter-select:focus {
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(22, 28, 22, 0.95);
+}
+
+.asset-filter-select option {
+  background: rgba(22, 28, 22, 1);
+  color: #f0f2f0;
+}
+
+/* Modal Form Styles */
+.modal-field-group {
+  margin-bottom: 0.75rem;
+}
+.modal-label {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--stone);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.3rem;
+}
+.modal-input {
+  width: 100%;
+  background: var(--surface-dark);
+  border: 1px solid var(--border-medium);
+  border-radius: 4px;
+  height: 34px;
+  padding: 0 0.75rem;
+  color: var(--parchment);
+  font-family: 'Geologica', sans-serif;
+  font-size: 0.82rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.modal-input:focus {
+  border-color: var(--moss-light);
+}
+select.modal-input {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 1.5rem;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%237b857b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 10px;
+}
+select.modal-input option {
+  background: #0f1410;
+  color: var(--parchment);
 }
 
 /* System console topic tiles */
@@ -1907,4 +2010,39 @@ div.overview-filter-bar {
 #expedition-board .field-card.domain-conservation {
   border-left: 0 !important;
   border-left-color: transparent !important;
+}
+
+
+/* Asset card body and bottom status bar (Field Assets) */
+.asset-card-body {
+  padding: 0.85rem 1rem 0.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.asset-bottom-status {
+  text-align: center;
+  padding: 0.35rem 0.5rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid;
+  margin: 0.35rem 0.6rem 0.6rem 0.6rem;
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.asset-bottom-status.status-available {
+  color: #3FA66E;
+  border-color: #3FA66E;
+  background: rgba(63, 166, 110, 0.05);
+}
+
+.asset-bottom-status.status-reserved {
+  color: #C97B4A;
+  border-color: #C97B4A;
+  background: rgba(201, 123, 74, 0.05);
 }
