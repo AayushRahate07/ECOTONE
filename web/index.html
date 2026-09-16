@@ -11,7 +11,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-  <link rel="stylesheet" href="styles.css?v=1014" />
+  <link rel="stylesheet" href="styles.css?v=1018" />
 </head>
 <body>
 <header class="top-nav">
@@ -22,6 +22,7 @@
     <a href="#/" class="nav-item active" id="nav-overview">Operations</a>
     <a href="#/projects" class="nav-item" id="nav-projects">Expeditions</a>
     <a href="#/resources" class="nav-item" id="nav-resources">Field assets</a>
+    <a href="#/teams" class="nav-item" id="nav-teams">Field teams</a>
     <a href="#/system" class="nav-item" id="nav-system">Console</a>
   </nav>
   <a href="#/projects/new" class="btn primary-btn">Plan operation</a>
@@ -216,7 +217,7 @@
 <div id="view-resources" class="view hidden">
   <div class="page-hero">
     <div>
-      <div class="page-eyebrow">Equipment inventory · deployed teams</div>
+      <div class="page-eyebrow">Equipment inventory · regional depots</div>
       <h1 class="page-title">Field Assets</h1>
     </div>
     <div class="pixel-mosaic" id="mosaic-assets"></div>
@@ -239,14 +240,46 @@
       <button class="btn primary-btn" onclick="openAddAssetModal()" style="margin-left:auto; font-size:0.75rem; padding:0.35rem 0.9rem; white-space:nowrap;">+ ADD ASSET</button>
     </div>
     <div class="asset-grid" id="asset-grid"></div>
-    <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-medium); padding-top: 1rem;">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
-        <h3 style="font-size:1rem; margin:0;">Field Teams</h3>
-        <button class="btn" onclick="openAddMemberModal()" style="font-size:0.7rem; padding:0.3rem 0.75rem; border:1px solid var(--border-medium); color:var(--stone);">+ ADD MEMBER</button>
+  </div>
+</div>
+
+
+<div id="view-teams" class="view hidden">
+  <div class="page-hero">
+    <div>
+      <div class="page-eyebrow">FIELD PERSONNEL · SPECIALISTS · DEPLOYED TEAMS</div>
+      <h1 class="page-title">Field Teams</h1>
+    </div>
+    <div class="pixel-mosaic" id="mosaic-teams"></div>
+  </div>
+
+  <div class="field-teams-card">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+      <div id="teams-summary" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--stone); letter-spacing: 0.05em; text-transform: uppercase;">
+        04 FIELD MEMBERS · 02 ASSIGNED · 02 AVAILABLE
       </div>
-      <table class="ledger-table">
-        <thead><tr><th>Member</th><th>Role</th><th>Specialty</th><th>Base</th><th>Status</th></tr></thead>
-        <tbody id="res-teams-body"></tbody>
+      <button class="btn primary-btn" onclick="openAddMemberModal()" style="font-size: 0.75rem; padding: 0.35rem 0.9rem; white-space: nowrap;">+ ADD MEMBER</button>
+    </div>
+
+    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; align-items: center; flex-wrap: wrap;">
+      <input type="text" id="team-search" oninput="applyTeamFilters()" placeholder="SEARCH" class="asset-filter-select" style="padding-right: 12px; background-image: none; width: 240px; color: var(--parchment);" />
+      <select id="team-filter-city" onchange="applyTeamFilters()" class="asset-filter-select">
+        <option value="">CITIES</option>
+      </select>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table class="field-teams-table">
+        <thead>
+          <tr>
+            <th style="width: 25%;">MEMBER</th>
+            <th style="width: 20%;">ROLE</th>
+            <th style="width: 25%;">SPECIALTY</th>
+            <th style="width: 15%;">BASE</th>
+            <th style="width: 15%;">STATUS</th>
+          </tr>
+        </thead>
+        <tbody id="teams-roster-body"></tbody>
       </table>
     </div>
   </div>
@@ -297,7 +330,7 @@
 
 
 
-<script src="app.js?v=1014"></script>
+<script src="app.js?v=1018"></script>
 
   <!-- Add Asset Modal -->
   <div id="add-asset-modal" style="display:none; position:fixed; inset:0; background: #00000000; z-index:9000; align-items:center; justify-content:center;">

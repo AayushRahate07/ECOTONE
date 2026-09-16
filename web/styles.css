@@ -2046,3 +2046,43 @@ div.overview-filter-bar {
   border-color: #C97B4A;
   background: rgba(201, 123, 74, 0.05);
 }
+
+
+/* Field Teams Translucent Container Card */
+.field-teams-card {
+  background: rgba(12, 22, 15, 0.45);
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 1.25rem 1.5rem;
+  margin-top: 1rem;
+}
+
+.field-teams-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.field-teams-table th {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  color: var(--stone);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-medium);
+  
+}
+
+.field-teams-table td {
+  padding: 0.75rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.85rem;
+  color: var(--parchment);
+}
+
+.field-teams-table tr:last-child td {
+  border-bottom: none;
+}

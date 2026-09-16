@@ -190,6 +190,9 @@ function handleRouting() {
   } else if (hash.startsWith("#/resources")) {
     showView("view-resources", "nav-resources");
     loadResourcesData();
+  } else if (hash.startsWith("#/teams")) {
+    showView("view-teams", "nav-teams");
+    loadFieldTeamsData();
   } else if (hash.startsWith("#/system")) {
     showView("view-system", "nav-system");
     loadSystemHealth();
@@ -1117,17 +1120,6 @@ async function loadResourcesData() {
     _allResources = data.resources || [];
 
     renderAssetGrid(_allResources);
-
-    // Teams table
-    document.getElementById('res-teams-body').innerHTML = (data.team_members || []).map(t => `
-      <tr>
-        <td style="font-weight: 600;">${t.name}</td>
-        <td style="color: var(--stone);">${t.role}</td>
-        <td style="color: var(--stone);">${t.specialty}</td>
-        <td>${t.location_base}</td>
-        <td><span class="status-tag ${t.availability_status === 'AVAILABLE' ? 'active' : 'pending'}" style="font-size:0.7rem;">● ${t.availability_status}</span></td>
-      </tr>
-    `).join('');
   } catch(e) {
     console.error('Error loading field assets:', e);
   }
@@ -1378,6 +1370,8 @@ function submitAddMember() {
   };
   window._localTeamMembers.push(member);
   appendTeamMemberRow(member);
+  updateCityDropdown();
+  renderFieldTeamsUI();
   closeAddMemberModal();
 }
 
@@ -1394,4 +1388,166 @@ function appendTeamMemberRow(t) {
     <td><span class="status-tag ${statusCls}" style="font-size:0.7rem;">● ${t.availability_status}</span></td>
   `;
   tbody.appendChild(tr);
+}
+
+
+// ── FIELD TEAMS PAGE: Complete Functional Implementation ──────────────────────
+
+window._allTeamMembersCache = window._allTeamMembersCache || [];
+window._localTeamMembers = window._localTeamMembers || [];
+
+const SEED_TEAM_MEMBERS = [
+  { name: 'Dr. Aris Thorne', role: 'Lead Ecologist', specialty: 'eDNA Sequencing', location_base: 'Pune', availability_status: 'ASSIGNED' },
+  { name: 'Elena Rostova', role: 'Drone Operator', specialty: 'LiDAR Topography', location_base: 'Satara', availability_status: 'ASSIGNED' },
+  { name: 'Siddharth Mehta', role: 'Botanist', specialty: 'Flora Taxonomy', location_base: 'Kolhapur', availability_status: 'AVAILABLE' },
+  { name: 'Maya Lin', role: 'Archaeologist', specialty: 'GPR Excavation', location_base: 'Mumbai', availability_status: 'AVAILABLE' }
+];
+
+async function loadFieldTeamsData() {
+  try {
+    if (!window._allTeamMembersCache || window._allTeamMembersCache.length === 0) {
+      const res = await fetch(`${API_BASE}/resources`);
+      const data = await res.json();
+      if (data.team_members && data.team_members.length > 0) {
+        window._allTeamMembersCache = data.team_members;
+      } else {
+        window._allTeamMembersCache = [...SEED_TEAM_MEMBERS];
+      }
+    }
+  } catch (e) {
+    console.warn('Network error loading field teams, using seed roster:', e);
+    if (!window._allTeamMembersCache || window._allTeamMembersCache.length === 0) {
+      window._allTeamMembersCache = [...SEED_TEAM_MEMBERS];
+    }
+  }
+  updateCityDropdown();
+  renderFieldTeamsUI();
+}
+
+function getCombinedTeamMembers() {
+  const base = window._allTeamMembersCache && window._allTeamMembersCache.length > 0
+    ? window._allTeamMembersCache
+    : SEED_TEAM_MEMBERS;
+  const local = window._localTeamMembers || [];
+  return [...base, ...local];
+}
+
+function updateCityDropdown() {
+  const citySelect = document.getElementById('team-filter-city');
+  if (!citySelect) return;
+
+  const currentVal = citySelect.value;
+  const members = getCombinedTeamMembers();
+  const cities = Array.from(new Set(members.map(m => m.location_base).filter(Boolean))).sort();
+
+  citySelect.innerHTML = '<option value="">All cities</option>' +
+    cities.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  if (cities.includes(currentVal)) {
+    citySelect.value = currentVal;
+  }
+}
+
+function applyTeamFilters() {
+  renderFieldTeamsUI();
+}
+
+function renderFieldTeamsUI() {
+  const allMembers = getCombinedTeamMembers();
+
+  // 1. Dynamic Summary Counts
+  const total = allMembers.length;
+  const assigned = allMembers.filter(m => (m.availability_status || '').toUpperCase() === 'ASSIGNED').length;
+  const available = allMembers.filter(m => (m.availability_status || '').toUpperCase() === 'AVAILABLE').length;
+
+  const totalStr = String(total).padStart(2, '0');
+  const assignedStr = String(assigned).padStart(2, '0');
+  const availableStr = String(available).padStart(2, '0');
+
+  const summaryEl = document.getElementById('teams-summary');
+  if (summaryEl) {
+    summaryEl.textContent = `${totalStr} FIELD MEMBERS · ${assignedStr} ASSIGNED · ${availableStr} AVAILABLE`;
+  }
+
+  // 2. Filter Members by Search Query and City Selection
+  const query = (document.getElementById('team-search')?.value || '').trim().toLowerCase();
+  const cityFilter = (document.getElementById('team-filter-city')?.value || '').trim().toLowerCase();
+
+  let filtered = allMembers;
+
+  if (cityFilter) {
+    filtered = filtered.filter(m => (m.location_base || '').toLowerCase() === cityFilter);
+  }
+
+  if (query) {
+    filtered = filtered.filter(m => {
+      const name = (m.name || '').toLowerCase();
+      const role = (m.role || '').toLowerCase();
+      const specialty = (m.specialty || '').toLowerCase();
+      const base = (m.location_base || '').toLowerCase();
+      const status = (m.availability_status || '').toLowerCase();
+      return name.includes(query) || role.includes(query) || specialty.includes(query) || base.includes(query) || status.includes(query);
+    });
+  }
+
+  // 3. Render Table Rows
+  const tbody = document.getElementById('teams-roster-body');
+  if (tbody) {
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="color:var(--stone); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-transform: uppercase; padding: 1.75rem 0; text-align: center;">NO TEAM MEMBERS MATCH THE CURRENT FILTERS</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filtered.map(t => {
+      const isAvailable = (t.availability_status || '').toUpperCase() === 'AVAILABLE';
+      const statusCls = isAvailable ? 'active' : 'pending';
+      const statusColor = isAvailable ? '#71b071' : '#c49a6c';
+      return `
+        <tr>
+          <td style="font-weight: 600; color: var(--parchment);">${t.name}</td>
+          <td style="color: var(--stone);">${t.role}</td>
+          <td style="color: var(--stone);">${t.specialty || '—'}</td>
+          <td style="color: var(--parchment);">${t.location_base}</td>
+          <td><span class="status-tag ${statusCls}" style="font-size:0.7rem; color:${statusColor}; text-shadow:none; animation:none;">● ${t.availability_status}</span></td>
+        </tr>
+      `;
+    }).join('');
+  }
+}
+
+function openAddMemberModal() {
+  const modal = document.getElementById('add-member-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAddMemberModal() {
+  const modal = document.getElementById('add-member-modal');
+  if (modal) modal.style.display = 'none';
+  const form = document.getElementById('add-member-form');
+  if (form) form.reset();
+  const errEl = document.getElementById('add-member-error');
+  if (errEl) errEl.textContent = '';
+}
+
+function submitAddMember() {
+  const name = document.getElementById('nm-name')?.value.trim();
+  const role = document.getElementById('nm-role')?.value.trim();
+  const specialty = document.getElementById('nm-specialty')?.value.trim();
+  const base = document.getElementById('nm-base')?.value.trim();
+  const status = document.getElementById('nm-status')?.value.trim();
+  const errEl = document.getElementById('add-member-error');
+
+  if (!name || !role || !specialty || !base || !status) {
+    if (errEl) errEl.textContent = 'All fields (Name, Role, Specialty, Base, Status) are required.';
+    return;
+  }
+
+  const member = {
+    name, role, specialty, location_base: base,
+    availability_status: status.toUpperCase(),
+  };
+
+  window._localTeamMembers.push(member);
+  updateCityDropdown();
+  renderFieldTeamsUI();
+  closeAddMemberModal();
 }
