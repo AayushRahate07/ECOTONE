@@ -31,11 +31,11 @@ If an operation encounters a failure during execution (such as an environmental 
 
 ## ⚙️ System Capabilities
 
-| 🗺️ **Geospatial Scoring & Constraints** | 🔄 **Saga Orchestration** |
+| 🗺️ Geospatial Scoring & Constraints | 🔄 Saga Orchestration |
 |---|---|
-| • **Composite Scoring:** Evaluates asset distance, transport time, battery level, workload, and priority.<br><br>• **Spatial Boundaries:** PostGIS `ST_Intersects` and bounding-box queries for restricted zones.<br><br>• **Geodesic Distance:** Haversine formula routing for remote outpost logistics. | • **Forward Execution:** 4-stage pipeline (`FUNDING` ➔ `RESOURCES` ➔ `TEAM` ➔ `PERMITS` ➔ `ACTIVE`).<br><br>• **Compensation Cascade:** Parallel rollback of locked grants, drones, and personnel on rejection.<br><br>• **Idempotency Claims:** Deduplication via `INSERT OR IGNORE INTO processed_events`. |
+| **Composite Scoring:** Evaluates asset distance, transport time, battery level, workload, and priority.<br><br>**Spatial Boundaries:** PostGIS `ST_Intersects` and bounding-box queries for restricted zones.<br><br>**Geodesic Distance:** Haversine formula routing for remote outpost logistics. | **Forward Execution:** 4-stage pipeline (`FUNDING` ➜ `RESOURCES` ➜ `TEAM` ➜ `PERMITS` ➜ `ACTIVE`).<br><br>**Compensation Cascade:** Parallel rollback of locked grants, drones, and personnel on rejection.<br><br>**Idempotency Claims:** Deduplication via `INSERT OR IGNORE INTO processed_events`. |
 | 📦 **Transactional Outbox** | 🔍 **System Observability** |
-| • **Atomic DB Writes:** Domain updates and outbox payloads committed in one transaction block.<br><br>• **At-Least-Once Delivery:** Worker process polls `PENDING` outbox rows and publishes to broker.<br><br>• **Crash Recovery:** Un-sent outbox events survive crashes and automatically replay on restart. | • **Saga Flow Visualizer:** 6-stage timeline renderer showing step execution & failure states.<br><br>• **Service Trace Matrix:** Execution step log annotated with Operation IDs (`OP_ID: 3afcc79d`).<br><br>• **Live Event Stream:** Real-time event log with instant filtering by operation ID and event type. |
+| **Atomic DB Writes:** Domain updates and outbox payloads committed in one transaction block.<br><br>**At-Least-Once Delivery:** Worker process polls `PENDING` outbox rows and publishes to broker.<br><br>**Crash Recovery:** Un-sent outbox events survive crashes and automatically replay on restart. | **Saga Flow Visualizer:** 6-stage timeline renderer showing step execution & failure states.<br><br>**Service Trace Matrix:** Execution step log annotated with Operation IDs (`OP_ID: 3afcc79d`).<br><br>**Live Event Stream:** Real-time event log with instant filtering by operation ID and event type. |
 
 <br />
 
