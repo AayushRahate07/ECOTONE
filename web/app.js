@@ -1,4 +1,4 @@
-﻿const API_BASE = window.location.origin + "/api";
+const API_BASE = window.location.origin + "/api";
 
 let currentRoute = "#/";
 let activeProjectDetailId = null;
@@ -1253,32 +1253,641 @@ function loadSagaFlow() {
   const pid = select?.value;
   const projects = window._consoleProjects || [];
   const p = projects.find(x => x.project_id === pid);
-  if (!p) return;
-
-  const isCompensating = p.status === 'COMPENSATING' || p.status === 'CANCELLED';
-  const nodes = [
-    { name: 'PROJECT\nCREATED', status: 'done' },
-    { name: 'FUNDS\nRESERVED', status: 'done' },
-    { name: 'RESOURCES\nRESERVED', status: p.status === 'DRAFT' ? 'current' : 'done' },
-    { name: 'TEAM\nASSIGNED', status: p.status === 'DRAFT' ? 'pending' : 'done' },
-    { name: 'PERMIT\nREQUESTED', status: p.permit_status === 'REJECTED' ? 'failed' : (p.status === 'ACTIVE' ? 'done' : 'current') },
-    { name: p.status === 'ACTIVE' ? 'ACTIVATED' : (isCompensating ? 'CANCELLED' : 'PENDING'), status: p.status === 'ACTIVE' ? 'done' : (isCompensating ? 'failed' : 'pending') },
-  ];
 
   const nodesEl = document.getElementById('saga-flow-nodes');
-  if (!nodesEl) return;
+  if (nodesEl) {
+    if (!p) {
+      nodesEl.innerHTML = `<div style="color:var(--stone); font-family: 'IBM Plex Mono', monospace; font-size:0.75rem; text-transform:uppercase; padding:1.5rem 0; text-align:center; width:100%;">SELECT AN OPERATION TO VIEW SAGA ACTIVITY</div>`;
+    } else {
+      const isCompensating = p.status === 'COMPENSATING' || p.status === 'CANCELLED';
+      const nodes = [
+        { name: 'PROJECT CREATED', status: 'done' },
+        { name: 'FUNDS RESERVED', status: p.funding_status === 'RELEASED' ? 'failed' : 'done' },
+        { name: 'ASSET RESERVED', status: p.resource_status === 'RELEASED' ? 'failed' : (p.status === 'DRAFT' ? 'current' : 'done') },
+        { name: 'TEAM ASSIGNED', status: p.team_status === 'UNASSIGNED' ? 'failed' : (p.status === 'DRAFT' ? 'pending' : 'done') },
+        { name: 'PERMIT REQUESTED', status: p.permit_status === 'REJECTED' ? 'failed' : (p.status === 'ACTIVE' ? 'done' : 'current') },
+        { name: p.status === 'ACTIVE' ? 'ACTIVATED' : (isCompensating ? 'CANCELLED' : 'PENDING'), status: p.status === 'ACTIVE' ? 'activated' : (isCompensating ? 'failed' : 'pending') },
+      ];
 
-  nodesEl.innerHTML = nodes.map((node, idx) => {
-    const arrowCls = isCompensating ? 'failed' : (node.status === 'done' ? 'active' : '');
-    return `
-      <div class="saga-flow-node">
-        <div class="saga-flow-node-box ${node.status}">
-          <div class="saga-flow-node-name">${node.name.replace('\n', '<br>')}</div>
-        </div>
+      nodesEl.innerHTML = nodes.map((node, idx) => {
+        const isLast = idx === nodes.length - 1;
+
+        let nodeColor = '#71b071';
+        let nodeBg = 'var(--surface-dark)';
+        let nodeBorder = '1px solid rgba(255, 255, 255, 0.12)';
+        let nodeWeight = '600';
+
+        if (node.status === 'activated') {
+          nodeColor = '#3FA66E';
+          nodeBg = 'rgba(63, 166, 110, 0.12)';
+          nodeBorder = '1px solid #3FA66E';
+          nodeWeight = '700';
+        } else if (node.name === 'CANCELLED') {
+          // CHANGE 1: Stronger red emphasis for final CANCELLED terminal state
+          nodeColor = '#d46565';
+          nodeBg = 'rgba(212, 101, 101, 0.12)';
+          nodeBorder = '1px solid #d46565';
+          nodeWeight = '700';
+        } else if (node.status === 'failed') {
+          nodeColor = '#d46565';
+          nodeBorder = '1px solid #d46565';
+        } else if (node.status === 'current') {
+          nodeColor = '#c49a6c';
+          nodeBorder = '1px solid #c49a6c';
+        } else if (node.status === 'pending') {
+          nodeColor = 'var(--stone)';
+          nodeBorder = '1px solid var(--border-medium)';
+        }
+
+        const displayStatus = node.status === 'activated' ? 'DONE' : node.status.toUpperCase();
+
+        return `
+          <div class="saga-flow-node" style="display:flex; align-items:center; flex-shrink:0;">
+            <div style="border:${nodeBorder}; padding:0.5rem 0.75rem; border-radius:4px; background:${nodeBg}; text-align:center;">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size:0.65rem; color:${nodeColor}; font-weight:${nodeWeight};">${node.name}</div>
+              <div style="font-size:0.6rem; color:var(--stone); margin-top:0.2rem;">${displayStatus}</div>
+            </div>
+            ${!isLast ? `<div style="margin:0 0.5rem; color:${(node.status === 'done' || node.status === 'activated') ? '#71b071' : 'var(--stone)'}; font-family: 'IBM Plex Mono', monospace;">&#8594;</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // Render Service Trace for selected operation
+  renderServiceTrace(p);
+}
+
+function renderServiceTrace(p) {
+  const traceCardTitle = document.getElementById('trace-op-title');
+  const traceCardId = document.getElementById('trace-op-id');
+  const traceContainer = document.getElementById('sys-service-trace');
+
+  if (!traceContainer) return;
+
+  if (!p) {
+    if (traceCardTitle) traceCardTitle.textContent = 'No operation selected';
+    if (traceCardId) traceCardId.textContent = '';
+    traceContainer.innerHTML = `<div style="color:var(--stone); font-family: 'IBM Plex Mono', monospace; font-size:0.75rem; text-transform:uppercase; padding:1.5rem 0; text-align:center;">SELECT AN OPERATION TO VIEW SERVICE TRACE</div>`;
+    return;
+  }
+
+  if (traceCardTitle) traceCardTitle.textContent = p.title;
+  if (traceCardId) traceCardId.textContent = `OP_ID: ${p.project_id.substring(0, 8)}`;
+
+  let traceEntries = [];
+  const shortOpId = p.project_id.substring(0, 8);
+
+  // 1. Initial Project Creation
+  traceEntries.push({
+    time: p.created_at,
+    service: 'Project Service',
+    action: 'OPERATION_INITIATED',
+    result: 'CONNECTED',
+    resource: p.location_name ? `Site: ${p.location_name}` : 'Project Core',
+    context: `Priority: ${p.priority || 'MEDIUM'} · Budget: ₹${(p.budget_requested || 0).toLocaleString('en-IN')}`
+  });
+
+  // 2. Saga Log entries
+  const sagaLog = p.saga_log || [];
+  if (sagaLog.length > 0) {
+    sagaLog.forEach(l => {
+      const step = l.step || '';
+      const status = l.status || '';
+      const details = l.details || '';
+      const t = l.created_at || p.created_at;
+
+      if (step === 'STEP_1_FUNDING') {
+        const resultState = status === 'STARTED' ? 'CONNECTED' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'FAILED');
+        traceEntries.push({
+          time: t,
+          service: 'Funding Service',
+          action: 'RESERVE_FUNDS',
+          result: resultState,
+          resource: `Grant Allocation (₹${(p.budget_requested || 0).toLocaleString('en-IN')})`,
+          context: details || 'Grant reservation confirmed'
+        });
+      } else if (step === 'STEP_2_RESOURCES') {
+        const isFail = status === 'FAILED' || details.includes('unavailable');
+        const resultState = isFail ? 'UNAVAILABLE' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'PENDING');
+        const eqList = Array.isArray(p.required_equipment) ? p.required_equipment.join(', ') : (p.required_equipment || 'Equipment');
+        traceEntries.push({
+          time: t,
+          service: 'Resource Service',
+          action: 'RESERVE_RESOURCES',
+          result: resultState,
+          resource: `Equipment: ${eqList}`,
+          context: isFail ? 'Resource allocation failed: required equipment unavailable in depot' : (details || 'Asset reservation confirmed')
+        });
+      } else if (step === 'STEP_3_TEAM') {
+        const isFail = status === 'FAILED' || details.includes('unassigned');
+        const resultState = isFail ? 'UNAVAILABLE' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'PENDING');
+        const teamList = Array.isArray(p.required_team) ? p.required_team.join(', ') : (p.required_team || 'Field Specialist');
+        traceEntries.push({
+          time: t,
+          service: 'Team Service',
+          action: 'ASSIGN_TEAM',
+          result: resultState,
+          resource: `Field Personnel: ${teamList}`,
+          context: details || 'Field team assignment confirmed'
+        });
+      } else if (step === 'STEP_4_PERMITS') {
+        const isApproved = status === 'COMPLETED' || p.permit_status === 'APPROVED';
+        const isRejected = p.permit_status === 'REJECTED' || details.includes('rejected') || details.includes('Rejected');
+        const resultState = isApproved ? 'GRANTED' : (isRejected ? 'REJECTED' : 'REQUESTED');
+        const agency = isRejected ? 'Karnataka Forest Department' : 'Ministry of Environment';
+        traceEntries.push({
+          time: t,
+          service: 'Regulatory Permit Service',
+          action: 'REQUEST_PERMIT',
+          result: resultState,
+          resource: `Permit Agency: ${agency}`,
+          context: isRejected ? 'Permit denied: Site intersects protected tiger corridor; drone flight prohibited' : (details || 'Environmental permit requested')
+        });
+      } else if (step === 'COMPENSATING' || step.startsWith('COMP_')) {
+        let serv = 'Compensation Service';
+        let act = 'TRIGGER_COMPENSATION';
+        let resText = 'Rollback Saga Execution';
+        if (step === 'COMP_FUNDS') { serv = 'Funding Service'; act = 'RELEASE_FUNDS'; resText = 'Grant Reservation'; }
+        else if (step === 'COMP_RESOURCES') { serv = 'Resource Service'; act = 'RELEASE_RESOURCES'; resText = 'Equipment Allocation'; }
+        else if (step === 'COMP_TEAM') { serv = 'Team Service'; act = 'UNASSIGN_TEAM'; resText = 'Team Assignment'; }
+
+        traceEntries.push({
+          time: t,
+          service: serv,
+          action: act,
+          result: status === 'DONE' || status === 'COMPENSATED' ? 'RELEASED' : 'COMPENSATING',
+          resource: resText,
+          context: details || 'Compensation step executed'
+        });
+      } else if (step === 'COMPENSATION_COMPLETE') {
+        traceEntries.push({
+          time: t,
+          service: 'Project Service',
+          action: 'CANCEL_OPERATION',
+          result: 'COMPLETED',
+          resource: `Operation ${shortOpId}`,
+          context: 'All rollback compensations acknowledged. Operation cancelled.'
+        });
+      }
+    });
+  }
+
+  if (p.status === 'ACTIVE' && !traceEntries.some(e => e.action === 'ACTIVATE_OPERATION')) {
+    traceEntries.push({
+      time: p.updated_at || p.created_at,
+      service: 'Project Service',
+      action: 'ACTIVATE_OPERATION',
+      result: 'COMPLETED',
+      resource: `Operation ${shortOpId}`,
+      context: 'All saga steps completed successfully. Operation active.'
+    });
+  }
+
+  traceContainer.innerHTML = `
+    <table class="field-teams-table" style="font-family: 'IBM Plex Mono', monospace; font-size:0.75rem; width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="width: 12%;">TIME</th>
+          <th style="width: 25%;">SERVICE / ACTION</th>
+          <th style="width: 13%;">RESULT</th>
+          <th style="width: 25%;">RELATED RESOURCE</th>
+          <th style="width: 25%;">DETAILS / REASON</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${traceEntries.map(e => {
+          let timeStr = '—';
+          if (e.time) {
+            try {
+              const d = new Date(e.time);
+              timeStr = d.toTimeString().split(' ')[0];
+            } catch (err) {}
+          }
+
+          let resColor = '#71b071';
+          if (['FAILED', 'REJECTED', 'UNAVAILABLE'].includes(e.result)) resColor = '#d46565';
+          else if (['PENDING', 'REQUESTED', 'COMPENSATING', 'RELEASED'].includes(e.result)) resColor = '#c49a6c';
+
+          return `
+            <tr>
+              <td style="color:var(--stone); font-size:0.72rem; padding: 0.65rem 0.75rem;">${timeStr}</td>
+              <td style="padding: 0.65rem 0.75rem;">
+                <div style="color: var(--parchment); font-weight: 600; font-size: 0.8rem; line-height: 1.2;">${e.service}</div>
+                <div style="color: var(--stone); font-size: 0.65rem; font-weight: 500; letter-spacing: 0.04em; margin-top: 0.15rem;">${e.action}</div>
+                <!-- CHANGE 2: Explicit Operation ID in Service Trace entries -->
+                <div style="color: var(--stone); font-size: 0.62rem; margin-top: 0.1rem;">OP_ID: ${shortOpId}</div>
+              </td>
+              <td style="padding: 0.65rem 0.75rem;"><span style="color:${resColor}; font-weight:600; letter-spacing:0.04em;">${e.result}</span></td>
+              <td style="color: var(--parchment); font-size: 0.78rem; font-weight: 500; padding: 0.65rem 0.75rem;">${e.resource}</td>
+              <td style="color: var(--stone); font-size: 0.72rem; line-height: 1.3; padding: 0.65rem 0.75rem;">${e.context}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function populateEventFilters(events, projects) {
+  const typeSelect = document.getElementById('sys-event-filter-type');
+  const projSelect = document.getElementById('sys-event-filter-proj');
+
+  if (typeSelect) {
+    const currentType = typeSelect.value;
+    const types = Array.from(new Set(events.map(e => e.event_type).filter(Boolean))).sort();
+    typeSelect.innerHTML = '<option value="">All events</option>' +
+      types.map(t => `<option value="${t}">${t}</option>`).join('');
+    if (types.includes(currentType)) typeSelect.value = currentType;
+  }
+
+  if (projSelect) {
+    const currentProj = projSelect.value;
+    projSelect.innerHTML = '<option value="">All operations</option>' +
+      projects.map(p => `<option value="${p.project_id}">${p.title}</option>`).join('');
+    if (projects.some(p => p.project_id === currentProj)) projSelect.value = currentProj;
+  }
+}
+
+function applyConsoleEventFilters() {
+  renderEventStream(window._allConsoleEvents || []);
+}
+
+function renderEventStream(events) {
+  const streamEl = document.getElementById('sys-stream');
+  if (!streamEl) return;
+
+  const typeFilter = (document.getElementById('sys-event-filter-type')?.value || '').trim();
+  const projFilter = (document.getElementById('sys-event-filter-proj')?.value || '').trim();
+
+  let filtered = events;
+  if (typeFilter) filtered = filtered.filter(e => e.event_type === typeFilter);
+  if (projFilter) filtered = filtered.filter(e => e.project_id === projFilter);
+
+  if (!filtered || filtered.length === 0) {
+    streamEl.innerHTML = `
+      <div style="text-align: center; padding: 2.5rem 1rem;">
+        <div style="color: var(--stone); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-transform: uppercase;">NO EVENTS RECORDED</div>
+        <div style="color: rgba(255,255,255,0.3); font-size: 0.75rem; margin-top: 0.35rem;">System activity will appear here when operations generate events.</div>
       </div>
-      ${idx < nodes.length - 1 ? `<div class="saga-flow-arrow ${arrowCls}">${isCompensating ? '←' : '→'}</div>` : ''}
+    `;
+    return;
+  }
+
+  streamEl.innerHTML = filtered.map(e => {
+    let timeStr = '—';
+    if (e.timestamp) {
+      try {
+        const d = new Date(e.timestamp);
+        timeStr = d.toTimeString().split(' ')[0];
+      } catch (err) {}
+    }
+    const pidShort = e.project_id ? e.project_id.substring(0, 8) : '';
+    return `
+      <div style="display: flex; gap: 1rem; padding: 0.55rem 0.25rem; border-bottom: 1px solid rgba(255,255,255,0.06); font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; align-items: baseline;">
+        <span style="color: var(--stone); min-width: 75px; flex-shrink: 0;">${timeStr}</span>
+        <!-- CHANGE 2: Explicit Operation ID in Event Stream entries -->
+        <div style="min-width: 175px; flex-shrink: 0;">
+          <div style="color: #71b071; font-weight: 600;">${e.event_type}</div>
+          ${pidShort ? `<div style="color: var(--stone); font-size: 0.65rem; margin-top: 0.1rem;">OP_ID: ${pidShort}</div>` : ''}
+        </div>
+        <span style="color: var(--parchment); flex: 1; word-break: break-word;">${e.details}</span>
+      </div>
     `;
   }).join('');
+}
+
+function renderServiceTrace(p) {
+  const traceCardTitle = document.getElementById('trace-op-title');
+  const traceCardId = document.getElementById('trace-op-id');
+  const traceContainer = document.getElementById('sys-service-trace');
+
+  if (!traceContainer) return;
+
+  if (!p) {
+    if (traceCardTitle) traceCardTitle.textContent = 'No operation selected';
+    if (traceCardId) traceCardId.textContent = '';
+    traceContainer.innerHTML = `<div style="color:var(--stone); font-family: 'IBM Plex Mono', monospace; font-size:0.75rem; text-transform:uppercase; padding:1.5rem 0; text-align:center;">SELECT AN OPERATION TO VIEW SERVICE TRACE</div>`;
+    return;
+  }
+
+  if (traceCardTitle) traceCardTitle.textContent = p.title;
+  if (traceCardId) traceCardId.textContent = `OP_ID: ${p.project_id.substring(0, 8)}`;
+
+  let traceEntries = [];
+
+  // 1. Initial Project Creation
+  traceEntries.push({
+    time: p.created_at,
+    service: 'Project Service',
+    action: 'OPERATION_INITIATED',
+    result: 'CONNECTED',
+    resource: p.location_name ? `Site: ${p.location_name}` : 'Project Core',
+    context: `Priority: ${p.priority || 'MEDIUM'} · Budget: ₹${(p.budget_requested || 0).toLocaleString('en-IN')}`
+  });
+
+  // 2. Saga Log entries
+  const sagaLog = p.saga_log || [];
+  if (sagaLog.length > 0) {
+    sagaLog.forEach(l => {
+      const step = l.step || '';
+      const status = l.status || '';
+      const details = l.details || '';
+      const t = l.created_at || p.created_at;
+
+      if (step === 'STEP_1_FUNDING') {
+        const resultState = status === 'STARTED' ? 'CONNECTED' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'FAILED');
+        traceEntries.push({
+          time: t,
+          service: 'Funding Service',
+          action: 'RESERVE_FUNDS',
+          result: resultState,
+          resource: `Grant Allocation (₹${(p.budget_requested || 0).toLocaleString('en-IN')})`,
+          context: details || 'Grant reservation confirmed'
+        });
+      } else if (step === 'STEP_2_RESOURCES') {
+        const isFail = status === 'FAILED' || details.includes('unavailable');
+        const resultState = isFail ? 'UNAVAILABLE' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'PENDING');
+        const eqList = Array.isArray(p.required_equipment) ? p.required_equipment.join(', ') : (p.required_equipment || 'Equipment');
+        traceEntries.push({
+          time: t,
+          service: 'Resource Service',
+          action: 'RESERVE_RESOURCES',
+          result: resultState,
+          resource: `Equipment: ${eqList}`,
+          context: isFail ? 'Resource allocation failed: required equipment unavailable in depot' : (details || 'Asset reservation confirmed')
+        });
+      } else if (step === 'STEP_3_TEAM') {
+        const isFail = status === 'FAILED' || details.includes('unassigned');
+        const resultState = isFail ? 'UNAVAILABLE' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'PENDING');
+        const teamList = Array.isArray(p.required_team) ? p.required_team.join(', ') : (p.required_team || 'Field Specialist');
+        traceEntries.push({
+          time: t,
+          service: 'Team Service',
+          action: 'ASSIGN_TEAM',
+          result: resultState,
+          resource: `Field Personnel: ${teamList}`,
+          context: details || 'Field team assignment confirmed'
+        });
+      } else if (step === 'STEP_4_PERMITS') {
+        const isApproved = status === 'COMPLETED' || p.permit_status === 'APPROVED';
+        const isRejected = p.permit_status === 'REJECTED' || details.includes('rejected') || details.includes('Rejected');
+        const resultState = isApproved ? 'GRANTED' : (isRejected ? 'REJECTED' : 'REQUESTED');
+        const agency = isRejected ? 'Karnataka Forest Department' : 'Ministry of Environment';
+        traceEntries.push({
+          time: t,
+          service: 'Regulatory Permit Service',
+          action: 'REQUEST_PERMIT',
+          result: resultState,
+          resource: `Permit Agency: ${agency}`,
+          context: isRejected ? 'Permit denied: Site intersects protected tiger corridor; drone flight prohibited' : (details || 'Environmental permit requested')
+        });
+      } else if (step === 'COMPENSATING' || step.startsWith('COMP_')) {
+        let serv = 'Compensation Service';
+        let act = 'TRIGGER_COMPENSATION';
+        let resText = 'Rollback Saga Execution';
+        if (step === 'COMP_FUNDS') { serv = 'Funding Service'; act = 'RELEASE_FUNDS'; resText = 'Grant Reservation'; }
+        else if (step === 'COMP_RESOURCES') { serv = 'Resource Service'; act = 'RELEASE_RESOURCES'; resText = 'Equipment Allocation'; }
+        else if (step === 'COMP_TEAM') { serv = 'Team Service'; act = 'UNASSIGN_TEAM'; resText = 'Team Assignment'; }
+
+        traceEntries.push({
+          time: t,
+          service: serv,
+          action: act,
+          result: status === 'DONE' || status === 'COMPENSATED' ? 'RELEASED' : 'COMPENSATING',
+          resource: resText,
+          context: details || 'Compensation step executed'
+        });
+      } else if (step === 'COMPENSATION_COMPLETE') {
+        traceEntries.push({
+          time: t,
+          service: 'Project Service',
+          action: 'CANCEL_OPERATION',
+          result: 'COMPLETED',
+          resource: `Operation ${p.project_id.substring(0,8)}`,
+          context: 'All rollback compensations acknowledged. Operation cancelled.'
+        });
+      }
+    });
+  }
+
+  if (p.status === 'ACTIVE' && !traceEntries.some(e => e.action === 'ACTIVATE_OPERATION')) {
+    traceEntries.push({
+      time: p.updated_at || p.created_at,
+      service: 'Project Service',
+      action: 'ACTIVATE_OPERATION',
+      result: 'COMPLETED',
+      resource: `Operation ${p.project_id.substring(0,8)}`,
+      context: 'All saga steps completed successfully. Operation active.'
+    });
+  }
+
+  traceContainer.innerHTML = `
+    <table class="field-teams-table" style="font-family: 'IBM Plex Mono', monospace; font-size:0.75rem; width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="width: 12%;">TIME</th>
+          <th style="width: 25%;">SERVICE / ACTION</th>
+          <th style="width: 13%;">RESULT</th>
+          <th style="width: 25%;">RELATED RESOURCE</th>
+          <th style="width: 25%;">DETAILS / REASON</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${traceEntries.map(e => {
+          let timeStr = '—';
+          if (e.time) {
+            try {
+              const d = new Date(e.time);
+              timeStr = d.toTimeString().split(' ')[0];
+            } catch (err) {}
+          }
+
+          let resColor = '#71b071';
+          if (['FAILED', 'REJECTED', 'UNAVAILABLE'].includes(e.result)) resColor = '#d46565';
+          else if (['PENDING', 'REQUESTED', 'COMPENSATING', 'RELEASED'].includes(e.result)) resColor = '#c49a6c';
+
+          return `
+            <tr>
+              <td style="color:var(--stone); font-size:0.72rem; padding: 0.65rem 0.75rem;">${timeStr}</td>
+              <td style="padding: 0.65rem 0.75rem;">
+                <div style="color: var(--parchment); font-weight: 600; font-size: 0.8rem; line-height: 1.2;">${e.service}</div>
+                <div style="color: var(--stone); font-size: 0.65rem; font-weight: 500; letter-spacing: 0.04em; margin-top: 0.15rem;">${e.action}</div>
+              </td>
+              <td style="padding: 0.65rem 0.75rem;"><span style="color:${resColor}; font-weight:600; letter-spacing:0.04em;">${e.result}</span></td>
+              <td style="color: var(--parchment); font-size: 0.78rem; font-weight: 500; padding: 0.65rem 0.75rem;">${e.resource}</td>
+              <td style="color: var(--stone); font-size: 0.72rem; line-height: 1.3; padding: 0.65rem 0.75rem;">${e.context}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderServiceTrace(p) {
+  const traceCardTitle = document.getElementById('trace-op-title');
+  const traceCardId = document.getElementById('trace-op-id');
+  const traceContainer = document.getElementById('sys-service-trace');
+
+  if (!traceContainer) return;
+
+  if (!p) {
+    if (traceCardTitle) traceCardTitle.textContent = 'No operation selected';
+    if (traceCardId) traceCardId.textContent = '';
+    traceContainer.innerHTML = '<div style="color:var(--stone); font-family: "IBM Plex Mono", monospace; font-size:0.75rem; text-transform:uppercase; padding:1.5rem 0; text-align:center;">SELECT AN OPERATION TO VIEW SERVICE TRACE</div>';
+    return;
+  }
+
+  if (traceCardTitle) traceCardTitle.textContent = p.title;
+  if (traceCardId) traceCardId.textContent = `OP_ID: ${p.project_id.substring(0, 8)}`;
+
+  let traceEntries = [];
+
+  // 1. Initial Project Creation
+  traceEntries.push({
+    time: p.created_at,
+    service: 'Project Service',
+    action: 'OPERATION_INITIATED',
+    result: 'CONNECTED',
+    resource: p.location_name ? `Site: ${p.location_name}` : 'Project Core',
+    context: `Priority: ${p.priority || 'MEDIUM'} · Budget: ₹${(p.budget_requested || 0).toLocaleString('en-IN')}`
+  });
+
+  // 2. Saga Log entries
+  const sagaLog = p.saga_log || [];
+  if (sagaLog.length > 0) {
+    sagaLog.forEach(l => {
+      const step = l.step || '';
+      const status = l.status || '';
+      const details = l.details || '';
+      const t = l.created_at || p.created_at;
+
+      if (step === 'STEP_1_FUNDING') {
+        const resultState = status === 'STARTED' ? 'CONNECTED' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'FAILED');
+        traceEntries.push({
+          time: t,
+          service: 'Funding Service',
+          action: 'RESERVE_FUNDS',
+          result: resultState,
+          resource: `Grant Allocation (₹${(p.budget_requested || 0).toLocaleString('en-IN')})`,
+          context: details || 'Grant reservation confirmed'
+        });
+      } else if (step === 'STEP_2_RESOURCES') {
+        const isFail = status === 'FAILED' || details.includes('unavailable');
+        const resultState = isFail ? 'UNAVAILABLE' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'PENDING');
+        const eqList = Array.isArray(p.required_equipment) ? p.required_equipment.join(', ') : (p.required_equipment || 'Equipment');
+        traceEntries.push({
+          time: t,
+          service: 'Resource Service',
+          action: 'RESERVE_RESOURCES',
+          result: resultState,
+          resource: `Equipment: ${eqList}`,
+          context: isFail ? 'Resource allocation failed: required equipment unavailable in depot' : (details || 'Asset reservation confirmed')
+        });
+      } else if (step === 'STEP_3_TEAM') {
+        const isFail = status === 'FAILED' || details.includes('unassigned');
+        const resultState = isFail ? 'UNAVAILABLE' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'PENDING');
+        const teamList = Array.isArray(p.required_team) ? p.required_team.join(', ') : (p.required_team || 'Field Specialist');
+        traceEntries.push({
+          time: t,
+          service: 'Team Service',
+          action: 'ASSIGN_TEAM',
+          result: resultState,
+          resource: `Field Personnel: ${teamList}`,
+          context: details || 'Field team assignment confirmed'
+        });
+      } else if (step === 'STEP_4_PERMITS') {
+        const isApproved = status === 'COMPLETED' || p.permit_status === 'APPROVED';
+        const isRejected = p.permit_status === 'REJECTED' || details.includes('rejected') || details.includes('Rejected');
+        const resultState = isApproved ? 'GRANTED' : (isRejected ? 'REJECTED' : 'REQUESTED');
+        const agency = isRejected ? 'Karnataka Forest Department' : 'Ministry of Environment';
+        traceEntries.push({
+          time: t,
+          service: 'Regulatory Permit Service',
+          action: 'REQUEST_PERMIT',
+          result: resultState,
+          resource: `Permit Agency: ${agency}`,
+          context: isRejected ? 'Permit denied: Site intersects protected tiger corridor; drone flight prohibited' : (details || 'Environmental permit requested')
+        });
+      } else if (step === 'COMPENSATING' || step.startsWith('COMP_')) {
+        let serv = 'Compensation Service';
+        let act = 'TRIGGER_COMPENSATION';
+        let resText = 'Rollback Saga Execution';
+        if (step === 'COMP_FUNDS') { serv = 'Funding Service'; act = 'RELEASE_FUNDS'; resText = 'Grant Reservation'; }
+        else if (step === 'COMP_RESOURCES') { serv = 'Resource Service'; act = 'RELEASE_RESOURCES'; resText = 'Equipment Allocation'; }
+        else if (step === 'COMP_TEAM') { serv = 'Team Service'; act = 'UNASSIGN_TEAM'; resText = 'Team Assignment'; }
+
+        traceEntries.push({
+          time: t,
+          service: serv,
+          action: act,
+          result: status === 'DONE' || status === 'COMPENSATED' ? 'RELEASED' : 'COMPENSATING',
+          resource: resText,
+          context: details || 'Compensation step executed'
+        });
+      } else if (step === 'COMPENSATION_COMPLETE') {
+        traceEntries.push({
+          time: t,
+          service: 'Project Service',
+          action: 'CANCEL_OPERATION',
+          result: 'COMPLETED',
+          resource: `Operation ${p.project_id.substring(0,8)}`,
+          context: 'All rollback compensations acknowledged. Operation cancelled.'
+        });
+      }
+    });
+  }
+
+  if (p.status === 'ACTIVE' && !traceEntries.some(e => e.action === 'ACTIVATE_OPERATION')) {
+    traceEntries.push({
+      time: p.updated_at || p.created_at,
+      service: 'Project Service',
+      action: 'ACTIVATE_OPERATION',
+      result: 'COMPLETED',
+      resource: `Operation ${p.project_id.substring(0,8)}`,
+      context: 'All saga steps completed successfully. Operation active.'
+    });
+  }
+
+  traceContainer.innerHTML = `
+    <table class="field-teams-table" style="font-family: "IBM Plex Mono", monospace; font-size:0.75rem;">
+      <thead>
+        <tr>
+          <th style="width: 14%;">TIME</th>
+          <th style="width: 23%;">SERVICE / ACTION</th>
+          <th style="width: 14%;">RESULT</th>
+          <th style="width: 24%;">RELATED RESOURCE</th>
+          <th style="width: 25%;">DETAILS / REASON</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${traceEntries.map(e => {
+          let timeStr = '—';
+          if (e.time) {
+            try {
+              const d = new Date(e.time);
+              timeStr = d.toTimeString().split(' ')[0];
+            } catch (err) {}
+          }
+
+          let resColor = '#71b071';
+          if (['FAILED', 'REJECTED', 'UNAVAILABLE'].includes(e.result)) resColor = '#d46565';
+          else if (['PENDING', 'REQUESTED', 'COMPENSATING', 'RELEASED'].includes(e.result)) resColor = '#c49a6c';
+
+          return `
+            <tr>
+              <td style="color:var(--stone);">${timeStr}</td>
+              <td style="color:var(--parchment); font-weight:600;">${e.service}<br><span style="color:var(--stone); font-size:0.68rem; font-weight:normal;">${e.action}</span></td>
+              <td><span style="color:${resColor}; font-weight:600; letter-spacing:0.04em;">${e.result}</span></td>
+              <td style="color:var(--parchment);">${e.resource}</td>
+              <td style="color:var(--stone); font-size:0.72rem;">${e.context}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 
@@ -1550,4 +2159,868 @@ function submitAddMember() {
   updateCityDropdown();
   renderFieldTeamsUI();
   closeAddMemberModal();
+}
+
+
+// ── SYSTEM CONSOLE PAGE: Data Wiring & Observability ─────────────────────────
+
+window._allConsoleEvents = window._allConsoleEvents || [];
+window._consoleProjects = window._consoleProjects || [];
+
+async function loadSystemHealth() {
+  try {
+    const [analyticsRes, projectsRes, healthRes] = await Promise.all([
+      fetch(`${API_BASE}/analytics`).catch(() => null),
+      fetch(`${API_BASE}/projects`).catch(() => null),
+      fetch(`${API_BASE}/system/health`).catch(() => null)
+    ]);
+
+    let analyticsData = analyticsRes ? await analyticsRes.json().catch(() => ({})) : {};
+    let projects = projectsRes ? await projectsRes.json().catch(() => []) : [];
+    let healthData = healthRes ? await healthRes.json().catch(() => ({})) : {};
+
+    if (!Array.isArray(projects)) projects = [];
+    window._consoleProjects = projects;
+
+    // 1. Event Bus Status
+    const busStatusEl = document.getElementById('sys-bus-status');
+    const isHealthy = healthData.health && healthData.health.kafka === 'Healthy';
+    if (busStatusEl) {
+      busStatusEl.textContent = isHealthy ? '● OPERATIONAL' : '● CONNECTED';
+      busStatusEl.style.color = '#71b071';
+    }
+
+    // 2. Collect Real Events from Analytics & Projects (saga_log + created_at)
+    let eventMap = new Map();
+
+    const analyticsEvents = analyticsData.recent_events || [];
+    analyticsEvents.forEach(e => {
+      const pId = e.payload_summary?.project_id || '';
+      const key = `${e.event_type}_${e.timestamp}_${pId}`;
+      eventMap.set(key, {
+        timestamp: e.timestamp,
+        event_type: formatConsoleEventType(e.event_type),
+        details: formatConsoleEventDetails(e),
+        project_id: pId,
+        project_title: e.payload_summary?.title || (projects.find(p => p.project_id === pId)?.title || '')
+      });
+    });
+
+    projects.forEach(p => {
+      if (p.created_at) {
+        const createKey = `PROJECT_CREATED_${p.created_at}_${p.project_id}`;
+        if (!eventMap.has(createKey)) {
+          eventMap.set(createKey, {
+            timestamp: p.created_at,
+            event_type: 'OPERATION_CREATED',
+            details: `Operation initialized: ${p.title} (${p.location_name || 'Site'})`,
+            project_id: p.project_id,
+            project_title: p.title
+          });
+        }
+      }
+
+      if (Array.isArray(p.saga_log)) {
+        p.saga_log.forEach(l => {
+          const logKey = `${l.step}_${l.created_at}_${p.project_id}`;
+          if (!eventMap.has(logKey)) {
+            eventMap.set(logKey, {
+              timestamp: l.created_at || p.created_at,
+              event_type: formatSagaStepEventType(l.step, l.status),
+              details: `${p.title} — ${l.details || l.status}`,
+              project_id: p.project_id,
+              project_title: p.title
+            });
+          }
+        });
+      }
+    });
+
+    let allEvents = Array.from(eventMap.values());
+    allEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    window._allConsoleEvents = allEvents;
+
+    // 3. Update Counts & Last Event Time
+    const countEl = document.getElementById('sys-event-count');
+    if (countEl) countEl.textContent = String(allEvents.length);
+
+    const lastTimeEl = document.getElementById('sys-last-event-time');
+    if (lastTimeEl) {
+      if (allEvents.length > 0 && allEvents[0].timestamp) {
+        try {
+          const d = new Date(allEvents[0].timestamp);
+          lastTimeEl.textContent = d.toTimeString().split(' ')[0] + ' (' + d.toLocaleDateString() + ')';
+        } catch (err) {
+          lastTimeEl.textContent = '—';
+        }
+      } else {
+        lastTimeEl.textContent = '—';
+      }
+    }
+
+    // 4. Populate Selectors & Filters
+    populateSagaSelect(projects);
+    populateEventFilters(allEvents, projects);
+    renderEventStream(allEvents);
+
+  } catch (e) {
+    console.error('Error loading System Console activity:', e);
+  }
+}
+
+function formatConsoleEventType(t) {
+  if (!t) return 'EVENT';
+  if (t.includes('created')) return 'OPERATION_CREATED';
+  if (t.includes('reserve-funds') || t.includes('funds-reserved')) return 'FUNDS_RESERVED';
+  if (t.includes('reserve-resources') || t.includes('resources-reserved')) return 'ASSET_RESERVED';
+  if (t.includes('assign-team') || t.includes('team-assigned')) return 'TEAM_ASSIGNED';
+  if (t.includes('permit-approved')) return 'PERMIT_APPROVED';
+  if (t.includes('permit-rejected')) return 'PERMIT_REJECTED';
+  if (t.includes('activated')) return 'OPERATION_ACTIVATED';
+  if (t.includes('cancelled')) return 'OPERATION_CANCELLED';
+  if (t.includes('released')) return 'COMPENSATION_RELEASED';
+  return t.replace('aegis.', '').replace('command.', '').replace('event.', '').replace(/\./g, '_').toUpperCase();
+}
+
+function formatConsoleEventDetails(e) {
+  const p = e.payload_summary || {};
+  if (p.title) return `${p.title} — ${e.event_type}`;
+  if (p.reason) return `Reason: ${p.reason}`;
+  if (p.grant_code) return `Grant: ${p.grant_code}`;
+  return e.event_type || 'System Event';
+}
+
+function formatSagaStepEventType(step, status) {
+  if (!step) return 'SAGA_EVENT';
+  if (step === 'STEP_1_FUNDING') return 'FUNDS_RESERVED';
+  if (step === 'STEP_2_RESOURCES') return 'ASSET_RESERVED';
+  if (step === 'STEP_3_TEAM') return 'TEAM_ASSIGNED';
+  if (step === 'STEP_4_PERMITS') return status === 'COMPLETED' ? 'PERMIT_APPROVED' : (status === 'REJECTED' ? 'PERMIT_REJECTED' : 'PERMIT_REQUESTED');
+  if (step === 'COMPENSATING') return 'COMPENSATION_TRIGGERED';
+  if (step.startsWith('COMP_')) return 'COMPENSATION_RELEASED';
+  if (step === 'COMPENSATION_COMPLETE') return 'OPERATION_CANCELLED';
+  return step.replace(/\./g, '_').toUpperCase();
+}
+
+function populateSagaSelect(projects) {
+  const sagaSelect = document.getElementById('saga-flow-select');
+  if (!sagaSelect) return;
+  const currentVal = sagaSelect.value;
+
+  sagaSelect.innerHTML = '<option value="">Select an operation to visualize its saga flow</option>' +
+    projects.map(p => `<option value="${p.project_id}">${p.title} — [${p.status}]</option>`).join('');
+
+  if (projects.some(p => p.project_id === currentVal)) {
+    sagaSelect.value = currentVal;
+    loadSagaFlow();
+  } else {
+    loadSagaFlow();
+  }
+}
+
+function loadSagaFlow() {
+  const select = document.getElementById('saga-flow-select');
+  const pid = select?.value;
+  const projects = window._consoleProjects || [];
+  const p = projects.find(x => x.project_id === pid);
+
+  const nodesEl = document.getElementById('saga-flow-nodes');
+  if (nodesEl) {
+    if (!p) {
+      nodesEl.innerHTML = `<div style="color:var(--stone); font-family: 'IBM Plex Mono', monospace; font-size:0.75rem; text-transform:uppercase; padding:1.5rem 0; text-align:center; width:100%;">SELECT AN OPERATION TO VIEW SAGA ACTIVITY</div>`;
+    } else {
+      const isCompensating = p.status === 'COMPENSATING' || p.status === 'CANCELLED';
+      const nodes = [
+        { name: 'PROJECT CREATED', status: 'done' },
+        { name: 'FUNDS RESERVED', status: p.funding_status === 'RELEASED' ? 'failed' : 'done' },
+        { name: 'ASSET RESERVED', status: p.resource_status === 'RELEASED' ? 'failed' : (p.status === 'DRAFT' ? 'current' : 'done') },
+        { name: 'TEAM ASSIGNED', status: p.team_status === 'UNASSIGNED' ? 'failed' : (p.status === 'DRAFT' ? 'pending' : 'done') },
+        { name: 'PERMIT REQUESTED', status: p.permit_status === 'REJECTED' ? 'failed' : (p.status === 'ACTIVE' ? 'done' : 'current') },
+        { name: p.status === 'ACTIVE' ? 'ACTIVATED' : (isCompensating ? 'CANCELLED' : 'PENDING'), status: p.status === 'ACTIVE' ? 'activated' : (isCompensating ? 'failed' : 'pending') },
+      ];
+
+      nodesEl.innerHTML = nodes.map((node, idx) => {
+        const isLast = idx === nodes.length - 1;
+
+        let nodeColor = '#71b071';
+        let nodeBg = 'var(--surface-dark)';
+        let nodeBorder = '1px solid rgba(255, 255, 255, 0.12)';
+        let nodeWeight = '600';
+
+        if (node.status === 'activated') {
+          nodeColor = '#3FA66E';
+          nodeBg = 'rgba(63, 166, 110, 0.12)';
+          nodeBorder = '1px solid #3FA66E';
+          nodeWeight = '700';
+        } else if (node.name === 'CANCELLED') {
+          // CHANGE 1: Stronger red emphasis for final CANCELLED terminal state
+          nodeColor = '#d46565';
+          nodeBg = 'rgba(212, 101, 101, 0.12)';
+          nodeBorder = '1px solid #d46565';
+          nodeWeight = '700';
+        } else if (node.status === 'failed') {
+          nodeColor = '#d46565';
+          nodeBorder = '1px solid #d46565';
+        } else if (node.status === 'current') {
+          nodeColor = '#c49a6c';
+          nodeBorder = '1px solid #c49a6c';
+        } else if (node.status === 'pending') {
+          nodeColor = 'var(--stone)';
+          nodeBorder = '1px solid var(--border-medium)';
+        }
+
+        const displayStatus = node.status === 'activated' ? 'DONE' : node.status.toUpperCase();
+
+        return `
+          <div class="saga-flow-node" style="display:flex; align-items:center; flex-shrink:0;">
+            <div style="border:${nodeBorder}; padding:0.5rem 0.75rem; border-radius:4px; background:${nodeBg}; text-align:center;">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size:0.65rem; color:${nodeColor}; font-weight:${nodeWeight};">${node.name}</div>
+              <div style="font-size:0.6rem; color:var(--stone); margin-top:0.2rem;">${displayStatus}</div>
+            </div>
+            ${!isLast ? `<div style="margin:0 0.5rem; color:${(node.status === 'done' || node.status === 'activated') ? '#71b071' : 'var(--stone)'}; font-family: 'IBM Plex Mono', monospace;">&#8594;</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // Render Service Trace for selected operation
+  renderServiceTrace(p);
+}
+
+function renderServiceTrace(p) {
+  const traceCardTitle = document.getElementById('trace-op-title');
+  const traceCardId = document.getElementById('trace-op-id');
+  const traceContainer = document.getElementById('sys-service-trace');
+
+  if (!traceContainer) return;
+
+  if (!p) {
+    if (traceCardTitle) traceCardTitle.textContent = 'No operation selected';
+    if (traceCardId) traceCardId.textContent = '';
+    traceContainer.innerHTML = `<div style="color:var(--stone); font-family: 'IBM Plex Mono', monospace; font-size:0.75rem; text-transform:uppercase; padding:1.5rem 0; text-align:center;">SELECT AN OPERATION TO VIEW SERVICE TRACE</div>`;
+    return;
+  }
+
+  if (traceCardTitle) traceCardTitle.textContent = p.title;
+  if (traceCardId) traceCardId.textContent = `OP_ID: ${p.project_id.substring(0, 8)}`;
+
+  let traceEntries = [];
+  const shortOpId = p.project_id.substring(0, 8);
+
+  // 1. Initial Project Creation
+  traceEntries.push({
+    time: p.created_at,
+    service: 'Project Service',
+    action: 'OPERATION_INITIATED',
+    result: 'CONNECTED',
+    resource: p.location_name ? `Site: ${p.location_name}` : 'Project Core',
+    context: `Priority: ${p.priority || 'MEDIUM'} · Budget: ₹${(p.budget_requested || 0).toLocaleString('en-IN')}`
+  });
+
+  // 2. Saga Log entries
+  const sagaLog = p.saga_log || [];
+  if (sagaLog.length > 0) {
+    sagaLog.forEach(l => {
+      const step = l.step || '';
+      const status = l.status || '';
+      const details = l.details || '';
+      const t = l.created_at || p.created_at;
+
+      if (step === 'STEP_1_FUNDING') {
+        const resultState = status === 'STARTED' ? 'CONNECTED' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'FAILED');
+        traceEntries.push({
+          time: t,
+          service: 'Funding Service',
+          action: 'RESERVE_FUNDS',
+          result: resultState,
+          resource: `Grant Allocation (₹${(p.budget_requested || 0).toLocaleString('en-IN')})`,
+          context: details || 'Grant reservation confirmed'
+        });
+      } else if (step === 'STEP_2_RESOURCES') {
+        const isFail = status === 'FAILED' || details.includes('unavailable');
+        const resultState = isFail ? 'UNAVAILABLE' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'PENDING');
+        const eqList = Array.isArray(p.required_equipment) ? p.required_equipment.join(', ') : (p.required_equipment || 'Equipment');
+        traceEntries.push({
+          time: t,
+          service: 'Resource Service',
+          action: 'RESERVE_RESOURCES',
+          result: resultState,
+          resource: `Equipment: ${eqList}`,
+          context: isFail ? 'Resource allocation failed: required equipment unavailable in depot' : (details || 'Asset reservation confirmed')
+        });
+      } else if (step === 'STEP_3_TEAM') {
+        const isFail = status === 'FAILED' || details.includes('unassigned');
+        const resultState = isFail ? 'UNAVAILABLE' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'PENDING');
+        const teamList = Array.isArray(p.required_team) ? p.required_team.join(', ') : (p.required_team || 'Field Specialist');
+        traceEntries.push({
+          time: t,
+          service: 'Team Service',
+          action: 'ASSIGN_TEAM',
+          result: resultState,
+          resource: `Field Personnel: ${teamList}`,
+          context: details || 'Field team assignment confirmed'
+        });
+      } else if (step === 'STEP_4_PERMITS') {
+        const isApproved = status === 'COMPLETED' || p.permit_status === 'APPROVED';
+        const isRejected = p.permit_status === 'REJECTED' || details.includes('rejected') || details.includes('Rejected');
+        const resultState = isApproved ? 'GRANTED' : (isRejected ? 'REJECTED' : 'REQUESTED');
+        const agency = isRejected ? 'Karnataka Forest Department' : 'Ministry of Environment';
+        traceEntries.push({
+          time: t,
+          service: 'Regulatory Permit Service',
+          action: 'REQUEST_PERMIT',
+          result: resultState,
+          resource: `Permit Agency: ${agency}`,
+          context: isRejected ? 'Permit denied: Site intersects protected tiger corridor; drone flight prohibited' : (details || 'Environmental permit requested')
+        });
+      } else if (step === 'COMPENSATING' || step.startsWith('COMP_')) {
+        let serv = 'Compensation Service';
+        let act = 'TRIGGER_COMPENSATION';
+        let resText = 'Rollback Saga Execution';
+        if (step === 'COMP_FUNDS') { serv = 'Funding Service'; act = 'RELEASE_FUNDS'; resText = 'Grant Reservation'; }
+        else if (step === 'COMP_RESOURCES') { serv = 'Resource Service'; act = 'RELEASE_RESOURCES'; resText = 'Equipment Allocation'; }
+        else if (step === 'COMP_TEAM') { serv = 'Team Service'; act = 'UNASSIGN_TEAM'; resText = 'Team Assignment'; }
+
+        traceEntries.push({
+          time: t,
+          service: serv,
+          action: act,
+          result: status === 'DONE' || status === 'COMPENSATED' ? 'RELEASED' : 'COMPENSATING',
+          resource: resText,
+          context: details || 'Compensation step executed'
+        });
+      } else if (step === 'COMPENSATION_COMPLETE') {
+        traceEntries.push({
+          time: t,
+          service: 'Project Service',
+          action: 'CANCEL_OPERATION',
+          result: 'COMPLETED',
+          resource: `Operation ${shortOpId}`,
+          context: 'All rollback compensations acknowledged. Operation cancelled.'
+        });
+      }
+    });
+  }
+
+  if (p.status === 'ACTIVE' && !traceEntries.some(e => e.action === 'ACTIVATE_OPERATION')) {
+    traceEntries.push({
+      time: p.updated_at || p.created_at,
+      service: 'Project Service',
+      action: 'ACTIVATE_OPERATION',
+      result: 'COMPLETED',
+      resource: `Operation ${shortOpId}`,
+      context: 'All saga steps completed successfully. Operation active.'
+    });
+  }
+
+  traceContainer.innerHTML = `
+    <table class="field-teams-table" style="font-family: 'IBM Plex Mono', monospace; font-size:0.75rem; width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="width: 12%;">TIME</th>
+          <th style="width: 25%;">SERVICE / ACTION</th>
+          <th style="width: 13%;">RESULT</th>
+          <th style="width: 25%;">RELATED RESOURCE</th>
+          <th style="width: 25%;">DETAILS / REASON</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${traceEntries.map(e => {
+          let timeStr = '—';
+          if (e.time) {
+            try {
+              const d = new Date(e.time);
+              timeStr = d.toTimeString().split(' ')[0];
+            } catch (err) {}
+          }
+
+          let resColor = '#71b071';
+          if (['FAILED', 'REJECTED', 'UNAVAILABLE'].includes(e.result)) resColor = '#d46565';
+          else if (['PENDING', 'REQUESTED', 'COMPENSATING', 'RELEASED'].includes(e.result)) resColor = '#c49a6c';
+
+          return `
+            <tr>
+              <td style="color:var(--stone); font-size:0.72rem; padding: 0.65rem 0.75rem;">${timeStr}</td>
+              <td style="padding: 0.65rem 0.75rem;">
+                <div style="color: var(--parchment); font-weight: 600; font-size: 0.8rem; line-height: 1.2;">${e.service}</div>
+                <div style="color: var(--stone); font-size: 0.65rem; font-weight: 500; letter-spacing: 0.04em; margin-top: 0.15rem;">${e.action}</div>
+                <!-- CHANGE 2: Explicit Operation ID in Service Trace entries -->
+                <div style="color: var(--stone); font-size: 0.62rem; margin-top: 0.1rem;">OP_ID: ${shortOpId}</div>
+              </td>
+              <td style="padding: 0.65rem 0.75rem;"><span style="color:${resColor}; font-weight:600; letter-spacing:0.04em;">${e.result}</span></td>
+              <td style="color: var(--parchment); font-size: 0.78rem; font-weight: 500; padding: 0.65rem 0.75rem;">${e.resource}</td>
+              <td style="color: var(--stone); font-size: 0.72rem; line-height: 1.3; padding: 0.65rem 0.75rem;">${e.context}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function populateEventFilters(events, projects) {
+  const typeSelect = document.getElementById('sys-event-filter-type');
+  const projSelect = document.getElementById('sys-event-filter-proj');
+
+  if (typeSelect) {
+    const currentType = typeSelect.value;
+    const types = Array.from(new Set(events.map(e => e.event_type).filter(Boolean))).sort();
+    typeSelect.innerHTML = '<option value="">All events</option>' +
+      types.map(t => `<option value="${t}">${t}</option>`).join('');
+    if (types.includes(currentType)) typeSelect.value = currentType;
+  }
+
+  if (projSelect) {
+    const currentProj = projSelect.value;
+    projSelect.innerHTML = '<option value="">All operations</option>' +
+      projects.map(p => `<option value="${p.project_id}">${p.title}</option>`).join('');
+    if (projects.some(p => p.project_id === currentProj)) projSelect.value = currentProj;
+  }
+}
+
+function applyConsoleEventFilters() {
+  renderEventStream(window._allConsoleEvents || []);
+}
+
+function renderEventStream(events) {
+  const streamEl = document.getElementById('sys-stream');
+  if (!streamEl) return;
+
+  const typeFilter = (document.getElementById('sys-event-filter-type')?.value || '').trim();
+  const projFilter = (document.getElementById('sys-event-filter-proj')?.value || '').trim();
+
+  let filtered = events;
+  if (typeFilter) filtered = filtered.filter(e => e.event_type === typeFilter);
+  if (projFilter) filtered = filtered.filter(e => e.project_id === projFilter);
+
+  if (!filtered || filtered.length === 0) {
+    streamEl.innerHTML = `
+      <div style="text-align: center; padding: 2.5rem 1rem;">
+        <div style="color: var(--stone); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-transform: uppercase;">NO EVENTS RECORDED</div>
+        <div style="color: rgba(255,255,255,0.3); font-size: 0.75rem; margin-top: 0.35rem;">System activity will appear here when operations generate events.</div>
+      </div>
+    `;
+    return;
+  }
+
+  streamEl.innerHTML = filtered.map(e => {
+    let timeStr = '—';
+    if (e.timestamp) {
+      try {
+        const d = new Date(e.timestamp);
+        timeStr = d.toTimeString().split(' ')[0];
+      } catch (err) {}
+    }
+    const pidShort = e.project_id ? e.project_id.substring(0, 8) : '';
+    return `
+      <div style="display: flex; gap: 1rem; padding: 0.55rem 0.25rem; border-bottom: 1px solid rgba(255,255,255,0.06); font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; align-items: baseline;">
+        <span style="color: var(--stone); min-width: 75px; flex-shrink: 0;">${timeStr}</span>
+        <!-- CHANGE 2: Explicit Operation ID in Event Stream entries -->
+        <div style="min-width: 175px; flex-shrink: 0;">
+          <div style="color: #71b071; font-weight: 600;">${e.event_type}</div>
+          ${pidShort ? `<div style="color: var(--stone); font-size: 0.65rem; margin-top: 0.1rem;">OP_ID: ${pidShort}</div>` : ''}
+        </div>
+        <span style="color: var(--parchment); flex: 1; word-break: break-word;">${e.details}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderServiceTrace(p) {
+  const traceCardTitle = document.getElementById('trace-op-title');
+  const traceCardId = document.getElementById('trace-op-id');
+  const traceContainer = document.getElementById('sys-service-trace');
+
+  if (!traceContainer) return;
+
+  if (!p) {
+    if (traceCardTitle) traceCardTitle.textContent = 'No operation selected';
+    if (traceCardId) traceCardId.textContent = '';
+    traceContainer.innerHTML = `<div style="color:var(--stone); font-family: 'IBM Plex Mono', monospace; font-size:0.75rem; text-transform:uppercase; padding:1.5rem 0; text-align:center;">SELECT AN OPERATION TO VIEW SERVICE TRACE</div>`;
+    return;
+  }
+
+  if (traceCardTitle) traceCardTitle.textContent = p.title;
+  if (traceCardId) traceCardId.textContent = `OP_ID: ${p.project_id.substring(0, 8)}`;
+
+  let traceEntries = [];
+
+  // 1. Initial Project Creation
+  traceEntries.push({
+    time: p.created_at,
+    service: 'Project Service',
+    action: 'OPERATION_INITIATED',
+    result: 'CONNECTED',
+    resource: p.location_name ? `Site: ${p.location_name}` : 'Project Core',
+    context: `Priority: ${p.priority || 'MEDIUM'} · Budget: ₹${(p.budget_requested || 0).toLocaleString('en-IN')}`
+  });
+
+  // 2. Saga Log entries
+  const sagaLog = p.saga_log || [];
+  if (sagaLog.length > 0) {
+    sagaLog.forEach(l => {
+      const step = l.step || '';
+      const status = l.status || '';
+      const details = l.details || '';
+      const t = l.created_at || p.created_at;
+
+      if (step === 'STEP_1_FUNDING') {
+        const resultState = status === 'STARTED' ? 'CONNECTED' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'FAILED');
+        traceEntries.push({
+          time: t,
+          service: 'Funding Service',
+          action: 'RESERVE_FUNDS',
+          result: resultState,
+          resource: `Grant Allocation (₹${(p.budget_requested || 0).toLocaleString('en-IN')})`,
+          context: details || 'Grant reservation confirmed'
+        });
+      } else if (step === 'STEP_2_RESOURCES') {
+        const isFail = status === 'FAILED' || details.includes('unavailable');
+        const resultState = isFail ? 'UNAVAILABLE' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'PENDING');
+        const eqList = Array.isArray(p.required_equipment) ? p.required_equipment.join(', ') : (p.required_equipment || 'Equipment');
+        traceEntries.push({
+          time: t,
+          service: 'Resource Service',
+          action: 'RESERVE_RESOURCES',
+          result: resultState,
+          resource: `Equipment: ${eqList}`,
+          context: isFail ? 'Resource allocation failed: required equipment unavailable in depot' : (details || 'Asset reservation confirmed')
+        });
+      } else if (step === 'STEP_3_TEAM') {
+        const isFail = status === 'FAILED' || details.includes('unassigned');
+        const resultState = isFail ? 'UNAVAILABLE' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'PENDING');
+        const teamList = Array.isArray(p.required_team) ? p.required_team.join(', ') : (p.required_team || 'Field Specialist');
+        traceEntries.push({
+          time: t,
+          service: 'Team Service',
+          action: 'ASSIGN_TEAM',
+          result: resultState,
+          resource: `Field Personnel: ${teamList}`,
+          context: details || 'Field team assignment confirmed'
+        });
+      } else if (step === 'STEP_4_PERMITS') {
+        const isApproved = status === 'COMPLETED' || p.permit_status === 'APPROVED';
+        const isRejected = p.permit_status === 'REJECTED' || details.includes('rejected') || details.includes('Rejected');
+        const resultState = isApproved ? 'GRANTED' : (isRejected ? 'REJECTED' : 'REQUESTED');
+        const agency = isRejected ? 'Karnataka Forest Department' : 'Ministry of Environment';
+        traceEntries.push({
+          time: t,
+          service: 'Regulatory Permit Service',
+          action: 'REQUEST_PERMIT',
+          result: resultState,
+          resource: `Permit Agency: ${agency}`,
+          context: isRejected ? 'Permit denied: Site intersects protected tiger corridor; drone flight prohibited' : (details || 'Environmental permit requested')
+        });
+      } else if (step === 'COMPENSATING' || step.startsWith('COMP_')) {
+        let serv = 'Compensation Service';
+        let act = 'TRIGGER_COMPENSATION';
+        let resText = 'Rollback Saga Execution';
+        if (step === 'COMP_FUNDS') { serv = 'Funding Service'; act = 'RELEASE_FUNDS'; resText = 'Grant Reservation'; }
+        else if (step === 'COMP_RESOURCES') { serv = 'Resource Service'; act = 'RELEASE_RESOURCES'; resText = 'Equipment Allocation'; }
+        else if (step === 'COMP_TEAM') { serv = 'Team Service'; act = 'UNASSIGN_TEAM'; resText = 'Team Assignment'; }
+
+        traceEntries.push({
+          time: t,
+          service: serv,
+          action: act,
+          result: status === 'DONE' || status === 'COMPENSATED' ? 'RELEASED' : 'COMPENSATING',
+          resource: resText,
+          context: details || 'Compensation step executed'
+        });
+      } else if (step === 'COMPENSATION_COMPLETE') {
+        traceEntries.push({
+          time: t,
+          service: 'Project Service',
+          action: 'CANCEL_OPERATION',
+          result: 'COMPLETED',
+          resource: `Operation ${p.project_id.substring(0,8)}`,
+          context: 'All rollback compensations acknowledged. Operation cancelled.'
+        });
+      }
+    });
+  }
+
+  if (p.status === 'ACTIVE' && !traceEntries.some(e => e.action === 'ACTIVATE_OPERATION')) {
+    traceEntries.push({
+      time: p.updated_at || p.created_at,
+      service: 'Project Service',
+      action: 'ACTIVATE_OPERATION',
+      result: 'COMPLETED',
+      resource: `Operation ${p.project_id.substring(0,8)}`,
+      context: 'All saga steps completed successfully. Operation active.'
+    });
+  }
+
+  traceContainer.innerHTML = `
+    <table class="field-teams-table" style="font-family: 'IBM Plex Mono', monospace; font-size:0.75rem; width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="width: 12%;">TIME</th>
+          <th style="width: 25%;">SERVICE / ACTION</th>
+          <th style="width: 13%;">RESULT</th>
+          <th style="width: 25%;">RELATED RESOURCE</th>
+          <th style="width: 25%;">DETAILS / REASON</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${traceEntries.map(e => {
+          let timeStr = '—';
+          if (e.time) {
+            try {
+              const d = new Date(e.time);
+              timeStr = d.toTimeString().split(' ')[0];
+            } catch (err) {}
+          }
+
+          let resColor = '#71b071';
+          if (['FAILED', 'REJECTED', 'UNAVAILABLE'].includes(e.result)) resColor = '#d46565';
+          else if (['PENDING', 'REQUESTED', 'COMPENSATING', 'RELEASED'].includes(e.result)) resColor = '#c49a6c';
+
+          return `
+            <tr>
+              <td style="color:var(--stone); font-size:0.72rem; padding: 0.65rem 0.75rem;">${timeStr}</td>
+              <td style="padding: 0.65rem 0.75rem;">
+                <div style="color: var(--parchment); font-weight: 600; font-size: 0.8rem; line-height: 1.2;">${e.service}</div>
+                <div style="color: var(--stone); font-size: 0.65rem; font-weight: 500; letter-spacing: 0.04em; margin-top: 0.15rem;">${e.action}</div>
+              </td>
+              <td style="padding: 0.65rem 0.75rem;"><span style="color:${resColor}; font-weight:600; letter-spacing:0.04em;">${e.result}</span></td>
+              <td style="color: var(--parchment); font-size: 0.78rem; font-weight: 500; padding: 0.65rem 0.75rem;">${e.resource}</td>
+              <td style="color: var(--stone); font-size: 0.72rem; line-height: 1.3; padding: 0.65rem 0.75rem;">${e.context}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderServiceTrace(p) {
+  const traceCardTitle = document.getElementById('trace-op-title');
+  const traceCardId = document.getElementById('trace-op-id');
+  const traceContainer = document.getElementById('sys-service-trace');
+
+  if (!traceContainer) return;
+
+  if (!p) {
+    if (traceCardTitle) traceCardTitle.textContent = 'No operation selected';
+    if (traceCardId) traceCardId.textContent = '';
+    traceContainer.innerHTML = '<div style="color:var(--stone); font-family: "IBM Plex Mono", monospace; font-size:0.75rem; text-transform:uppercase; padding:1.5rem 0; text-align:center;">SELECT AN OPERATION TO VIEW SERVICE TRACE</div>';
+    return;
+  }
+
+  if (traceCardTitle) traceCardTitle.textContent = p.title;
+  if (traceCardId) traceCardId.textContent = `OP_ID: ${p.project_id.substring(0, 8)}`;
+
+  let traceEntries = [];
+
+  // 1. Initial Project Creation
+  traceEntries.push({
+    time: p.created_at,
+    service: 'Project Service',
+    action: 'OPERATION_INITIATED',
+    result: 'CONNECTED',
+    resource: p.location_name ? `Site: ${p.location_name}` : 'Project Core',
+    context: `Priority: ${p.priority || 'MEDIUM'} · Budget: ₹${(p.budget_requested || 0).toLocaleString('en-IN')}`
+  });
+
+  // 2. Saga Log entries
+  const sagaLog = p.saga_log || [];
+  if (sagaLog.length > 0) {
+    sagaLog.forEach(l => {
+      const step = l.step || '';
+      const status = l.status || '';
+      const details = l.details || '';
+      const t = l.created_at || p.created_at;
+
+      if (step === 'STEP_1_FUNDING') {
+        const resultState = status === 'STARTED' ? 'CONNECTED' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'FAILED');
+        traceEntries.push({
+          time: t,
+          service: 'Funding Service',
+          action: 'RESERVE_FUNDS',
+          result: resultState,
+          resource: `Grant Allocation (₹${(p.budget_requested || 0).toLocaleString('en-IN')})`,
+          context: details || 'Grant reservation confirmed'
+        });
+      } else if (step === 'STEP_2_RESOURCES') {
+        const isFail = status === 'FAILED' || details.includes('unavailable');
+        const resultState = isFail ? 'UNAVAILABLE' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'PENDING');
+        const eqList = Array.isArray(p.required_equipment) ? p.required_equipment.join(', ') : (p.required_equipment || 'Equipment');
+        traceEntries.push({
+          time: t,
+          service: 'Resource Service',
+          action: 'RESERVE_RESOURCES',
+          result: resultState,
+          resource: `Equipment: ${eqList}`,
+          context: isFail ? 'Resource allocation failed: required equipment unavailable in depot' : (details || 'Asset reservation confirmed')
+        });
+      } else if (step === 'STEP_3_TEAM') {
+        const isFail = status === 'FAILED' || details.includes('unassigned');
+        const resultState = isFail ? 'UNAVAILABLE' : (status === 'RUNNING' || status === 'COMPLETED' ? 'GRANTED' : 'PENDING');
+        const teamList = Array.isArray(p.required_team) ? p.required_team.join(', ') : (p.required_team || 'Field Specialist');
+        traceEntries.push({
+          time: t,
+          service: 'Team Service',
+          action: 'ASSIGN_TEAM',
+          result: resultState,
+          resource: `Field Personnel: ${teamList}`,
+          context: details || 'Field team assignment confirmed'
+        });
+      } else if (step === 'STEP_4_PERMITS') {
+        const isApproved = status === 'COMPLETED' || p.permit_status === 'APPROVED';
+        const isRejected = p.permit_status === 'REJECTED' || details.includes('rejected') || details.includes('Rejected');
+        const resultState = isApproved ? 'GRANTED' : (isRejected ? 'REJECTED' : 'REQUESTED');
+        const agency = isRejected ? 'Karnataka Forest Department' : 'Ministry of Environment';
+        traceEntries.push({
+          time: t,
+          service: 'Regulatory Permit Service',
+          action: 'REQUEST_PERMIT',
+          result: resultState,
+          resource: `Permit Agency: ${agency}`,
+          context: isRejected ? 'Permit denied: Site intersects protected tiger corridor; drone flight prohibited' : (details || 'Environmental permit requested')
+        });
+      } else if (step === 'COMPENSATING' || step.startsWith('COMP_')) {
+        let serv = 'Compensation Service';
+        let act = 'TRIGGER_COMPENSATION';
+        let resText = 'Rollback Saga Execution';
+        if (step === 'COMP_FUNDS') { serv = 'Funding Service'; act = 'RELEASE_FUNDS'; resText = 'Grant Reservation'; }
+        else if (step === 'COMP_RESOURCES') { serv = 'Resource Service'; act = 'RELEASE_RESOURCES'; resText = 'Equipment Allocation'; }
+        else if (step === 'COMP_TEAM') { serv = 'Team Service'; act = 'UNASSIGN_TEAM'; resText = 'Team Assignment'; }
+
+        traceEntries.push({
+          time: t,
+          service: serv,
+          action: act,
+          result: status === 'DONE' || status === 'COMPENSATED' ? 'RELEASED' : 'COMPENSATING',
+          resource: resText,
+          context: details || 'Compensation step executed'
+        });
+      } else if (step === 'COMPENSATION_COMPLETE') {
+        traceEntries.push({
+          time: t,
+          service: 'Project Service',
+          action: 'CANCEL_OPERATION',
+          result: 'COMPLETED',
+          resource: `Operation ${p.project_id.substring(0,8)}`,
+          context: 'All rollback compensations acknowledged. Operation cancelled.'
+        });
+      }
+    });
+  }
+
+  if (p.status === 'ACTIVE' && !traceEntries.some(e => e.action === 'ACTIVATE_OPERATION')) {
+    traceEntries.push({
+      time: p.updated_at || p.created_at,
+      service: 'Project Service',
+      action: 'ACTIVATE_OPERATION',
+      result: 'COMPLETED',
+      resource: `Operation ${p.project_id.substring(0,8)}`,
+      context: 'All saga steps completed successfully. Operation active.'
+    });
+  }
+
+  traceContainer.innerHTML = `
+    <table class="field-teams-table" style="font-family: "IBM Plex Mono", monospace; font-size:0.75rem;">
+      <thead>
+        <tr>
+          <th style="width: 14%;">TIME</th>
+          <th style="width: 23%;">SERVICE / ACTION</th>
+          <th style="width: 14%;">RESULT</th>
+          <th style="width: 24%;">RELATED RESOURCE</th>
+          <th style="width: 25%;">DETAILS / REASON</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${traceEntries.map(e => {
+          let timeStr = '—';
+          if (e.time) {
+            try {
+              const d = new Date(e.time);
+              timeStr = d.toTimeString().split(' ')[0];
+            } catch (err) {}
+          }
+
+          let resColor = '#71b071';
+          if (['FAILED', 'REJECTED', 'UNAVAILABLE'].includes(e.result)) resColor = '#d46565';
+          else if (['PENDING', 'REQUESTED', 'COMPENSATING', 'RELEASED'].includes(e.result)) resColor = '#c49a6c';
+
+          return `
+            <tr>
+              <td style="color:var(--stone);">${timeStr}</td>
+              <td style="color:var(--parchment); font-weight:600;">${e.service}<br><span style="color:var(--stone); font-size:0.68rem; font-weight:normal;">${e.action}</span></td>
+              <td><span style="color:${resColor}; font-weight:600; letter-spacing:0.04em;">${e.result}</span></td>
+              <td style="color:var(--parchment);">${e.resource}</td>
+              <td style="color:var(--stone); font-size:0.72rem;">${e.context}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function populateEventFilters(events, projects) {
+  const typeSelect = document.getElementById('sys-event-filter-type');
+  const projSelect = document.getElementById('sys-event-filter-proj');
+
+  if (typeSelect) {
+    const currentType = typeSelect.value;
+    const types = Array.from(new Set(events.map(e => e.event_type).filter(Boolean))).sort();
+    typeSelect.innerHTML = '<option value="">All events</option>' +
+      types.map(t => `<option value="${t}">${t}</option>`).join('');
+    if (types.includes(currentType)) typeSelect.value = currentType;
+  }
+
+  if (projSelect) {
+    const currentProj = projSelect.value;
+    projSelect.innerHTML = '<option value="">All operations</option>' +
+      projects.map(p => `<option value="${p.project_id}">${p.title}</option>`).join('');
+    if (projects.some(p => p.project_id === currentProj)) projSelect.value = currentProj;
+  }
+}
+
+function applyConsoleEventFilters() {
+  renderEventStream(window._allConsoleEvents || []);
+}
+
+function renderEventStream(events) {
+  const streamEl = document.getElementById('sys-stream');
+  if (!streamEl) return;
+
+  const typeFilter = (document.getElementById('sys-event-filter-type')?.value || '').trim();
+  const projFilter = (document.getElementById('sys-event-filter-proj')?.value || '').trim();
+
+  let filtered = events;
+  if (typeFilter) filtered = filtered.filter(e => e.event_type === typeFilter);
+  if (projFilter) filtered = filtered.filter(e => e.project_id === projFilter);
+
+  if (!filtered || filtered.length === 0) {
+    streamEl.innerHTML = `
+      <div style="text-align: center; padding: 2.5rem 1rem;">
+        <div style="color: var(--stone); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-transform: uppercase;">NO EVENTS RECORDED</div>
+        <div style="color: rgba(255,255,255,0.3); font-size: 0.75rem; margin-top: 0.35rem;">System activity will appear here when operations generate events.</div>
+      </div>
+    `;
+    return;
+  }
+
+  streamEl.innerHTML = filtered.map(e => {
+    let timeStr = '—';
+    if (e.timestamp) {
+      try {
+        const d = new Date(e.timestamp);
+        timeStr = d.toTimeString().split(' ')[0];
+      } catch (err) {}
+    }
+    const pidShort = e.project_id ? e.project_id.substring(0, 8) : '';
+    return `
+      <div style="display: flex; gap: 1rem; padding: 0.55rem 0.25rem; border-bottom: 1px solid rgba(255,255,255,0.06); font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; align-items: baseline;">
+        <span style="color: var(--stone); min-width: 75px; flex-shrink: 0;">${timeStr}</span>
+        <span style="color: #71b071; font-weight: 600; min-width: 175px; flex-shrink: 0;">${e.event_type}</span>
+        <span style="color: var(--parchment); flex: 1; word-break: break-word;">${e.details}</span>
+        ${pidShort ? `<span style="color: var(--stone); font-size: 0.68rem; flex-shrink: 0;">${pidShort}</span>` : ''}
+      </div>
+    `;
+  }).join('');
 }

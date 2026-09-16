@@ -11,7 +11,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-  <link rel="stylesheet" href="styles.css?v=1018" />
+  <link rel="stylesheet" href="styles.css?v=1024" />
 </head>
 <body>
 <header class="top-nav">
@@ -288,27 +288,83 @@
 <div id="view-system" class="view hidden">
   <div class="page-hero">
     <div>
-      <div class="page-eyebrow">Saga orchestration · observability layer</div>
+      <div class="page-eyebrow">SAGA ORCHESTRATION · OBSERVABILITY LAYER</div>
       <h1 class="page-title">System Console</h1>
     </div>
     <div class="pixel-mosaic" id="mosaic-console"></div>
   </div>
 
-  <div class="text-label" style="margin-bottom: 0.75rem">Event bus health</div>
-  <div class="topic-grid" id="topic-grid"></div>
-
-  <div class="text-label" style="margin-bottom: 0.75rem">Saga flow</div>
-  <div class="saga-flow-viz" id="saga-flow-viz">
-    <select id="saga-flow-select" onchange="loadSagaFlow()">
-      <option value="">Select an operation to visualize its saga flow</option>
-    </select>
-    <div class="saga-flow-nodes" id="saga-flow-nodes"></div>
+  <!-- Section 1: Event Bus Health -->
+  <div class="console-card">
+    <div class="text-label" style="margin-bottom: 0.75rem;">Event bus status</div>
+    <div class="console-health-row" style="display: flex; gap: 2.5rem; align-items: center; flex-wrap: wrap;">
+      <div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--stone); text-transform: uppercase;">EVENT BUS</div>
+        <div id="sys-bus-status" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 600; color: #71b071; margin-top: 0.2rem;">● CONNECTED</div>
+      </div>
+      <div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--stone); text-transform: uppercase;">TOTAL EVENTS</div>
+        <div id="sys-event-count" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; color: var(--parchment); margin-top: 0.2rem;">0</div>
+      </div>
+      <div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--stone); text-transform: uppercase;">LAST EVENT</div>
+        <div id="sys-last-event-time" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; color: var(--parchment); margin-top: 0.2rem;">—</div>
+      </div>
+    </div>
   </div>
 
-  <div class="text-label" style="margin-bottom: 0.5rem">Event stream</div>
-  <div id="sys-stream" class="tech-log-pre" style="height: 300px; overflow-y: auto;"></div>
-</div>
+  <!-- Section 2: Saga Flow -->
+  <div class="console-card">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+      <div class="text-label" style="margin: 0;">Saga flow</div>
+      <select id="saga-flow-select" onchange="loadSagaFlow()" class="asset-filter-select" style="width: 320px; max-width: 100%; color: var(--parchment);">
+        <option value="">Select an operation to visualize its saga flow</option>
+      </select>
+    </div>
+    <div id="saga-flow-nodes-wrapper" style="overflow-x: auto;">
+      <div id="saga-flow-nodes" class="saga-flow-nodes" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap; min-height: 60px;">
+        <div style="color:var(--stone); font-family:'IBM Plex Mono',monospace; font-size:0.75rem; text-transform:uppercase; padding:1.5rem 0; text-align:center; width: 100%;">
+          SELECT AN OPERATION TO VIEW SAGA ACTIVITY
+        </div>
+      </div>
 
+  <!-- Section 2B: Service Trace (Selected Operation) -->
+  <div class="console-card" id="console-service-trace-card" style="margin-top: 1.5rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem">
+      <div class="text-label" style="margin: 0;">Service trace · <span id="trace-op-title" style="color: var(--parchment); font-weight: normal; text-transform: none;">No operation selected</span></div>
+      <div id="trace-op-id" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--stone);"></div>
+    </div>
+    <div id="sys-service-trace" style="overflow-x: auto;">
+      <div style="color:var(--stone); font-family:'IBM Plex Mono',monospace; font-size:0.75rem; text-transform:uppercase; padding:1.5rem 0; text-align:center;">
+        SELECT AN OPERATION TO VIEW SERVICE TRACE
+      </div>
+    </div>
+  </div>
+
+    </div>
+  </div>
+
+  <!-- Section 3: Event Stream -->
+  <div class="console-card">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+      <div class="text-label" style="margin: 0;">Event stream</div>
+      <div style="display: flex; gap: 0.5rem;">
+        <select id="sys-event-filter-type" onchange="applyConsoleEventFilters()" class="asset-filter-select">
+          <option value="">All events</option>
+        </select>
+        <select id="sys-event-filter-proj" onchange="applyConsoleEventFilters()" class="asset-filter-select">
+          <option value="">All operations</option>
+        </select>
+      </div>
+    </div>
+    <div id="sys-stream" class="tech-log-pre" style="min-height: 180px; max-height: 380px; overflow-y: auto;">
+      <div style="text-align: center; padding: 2.5rem 1rem;">
+        <div style="color: var(--stone); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-transform: uppercase;">NO EVENTS RECORDED</div>
+        <div style="color: rgba(255,255,255,0.3); font-size: 0.75rem; margin-top: 0.35rem;">System activity will appear here when operations generate events.</div>
+      </div>
+    </div>
+  </div>
+</div>
 </main>
 
 <footer style="border-top: 1px solid var(--border-medium); padding: 2rem 2.5rem; text-align: center; color: var(--text-secondary); font-size: 13px; margin-top: 2rem;">
@@ -330,7 +386,7 @@
 
 
 
-<script src="app.js?v=1018"></script>
+<script src="app.js?v=1024"></script>
 
   <!-- Add Asset Modal -->
   <div id="add-asset-modal" style="display:none; position:fixed; inset:0; background: #00000000; z-index:9000; align-items:center; justify-content:center;">

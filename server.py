@@ -69,6 +69,7 @@ class AegisRequestHandler(SimpleHTTPRequestHandler):
                 total_asset_cost = sum(c[0] * 8 for c in reserved)
                 budget_remaining = (r[8] or 0) - total_asset_cost
 
+                saga_log = project_service.get_saga_log(r[0])
                 projects.append({
                     "project_id": r[0], "title": r[1], "description": r[2], "status": r[3],
                     "location_name": r[4], "site_lat": r[5], "site_lon": r[6], "priority": r[7],
@@ -79,7 +80,8 @@ class AegisRequestHandler(SimpleHTTPRequestHandler):
                     "days_waiting": days_waiting,
                     "nearest_asset_km": round(min_dist, 1) if min_dist is not None else None,
                     "risk_flags": risk_flags,
-                    "budget_remaining": budget_remaining
+                    "budget_remaining": budget_remaining,
+                    "saga_log": saga_log
                 })
             send_json(projects)
             return
