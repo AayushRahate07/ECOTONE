@@ -29,6 +29,8 @@ If an operation encounters a failure during execution (such as an environmental 
 
 ---
 
+## ⚙️ System Details
+
 <table width="100%" cellpadding="10" cellspacing="0">
   <tr>
     <td><b>🗺️ Geospatial Scoring & Constraints</b></td>
