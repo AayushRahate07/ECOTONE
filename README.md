@@ -31,66 +31,11 @@ If an operation encounters a failure during execution (such as an environmental 
 
 ## ⚙️ System Capabilities
 
-<table width="100%" cellpadding="0" cellspacing="0"
-       style="border-collapse: separate; border-spacing: 0;">
-
-  <tr>
-    <td width="50%" valign="top"
-        style="padding: 22px 24px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.02);">
-
-      <h3 align="center">🗺️ Geospatial Scoring & Constraints</h3>
-
-      <ul>
-        <li><b>Composite Scoring:</b> Evaluates asset distance, transport time, battery level, workload, and priority.</li>
-        <li><b>Spatial Boundaries:</b> PostGIS <code>ST_Intersects</code> and bounding-box queries for restricted zones.</li>
-        <li><b>Geodesic Distance:</b> Haversine formula routing for remote outpost logistics.</li>
-      </ul>
-
-    </td>
-
-    <td width="50%" valign="top"
-        style="padding: 22px 24px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.02);">
-
-      <h3 align="center">🔄 Saga Orchestration</h3>
-
-      <ul>
-        <li><b>Forward Execution:</b> 4-stage pipeline (<code>FUNDING</code> ➔ <code>RESOURCES</code> ➔ <code>TEAM</code> ➔ <code>PERMITS</code> ➔ <code>ACTIVE</code>).</li>
-        <li><b>Compensation Cascade:</b> Parallel rollback of locked grants, drones, and personnel on rejection.</li>
-        <li><b>Idempotency Claims:</b> Deduplication via <code>INSERT OR IGNORE INTO processed_events</code>.</li>
-      </ul>
-
-    </td>
-  </tr>
-
-  <tr>
-    <td width="50%" valign="top"
-        style="padding: 22px 24px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.02);">
-
-      <h3 align="center">📦 Transactional Outbox</h3>
-
-      <ul>
-        <li><b>Atomic DB Writes:</b> Domain updates and outbox payloads committed in one transaction block.</li>
-        <li><b>At-Least-Once Delivery:</b> Worker process polls <code>PENDING</code> outbox rows and publishes to broker.</li>
-        <li><b>Crash Recovery:</b> Un-sent outbox events survive crashes and automatically replay on restart.</li>
-      </ul>
-
-    </td>
-
-    <td width="50%" valign="top"
-        style="padding: 22px 24px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.02);">
-
-      <h3 align="center">🔍 System Observability</h3>
-
-      <ul>
-        <li><b>Saga Flow Visualizer:</b> 6-stage timeline renderer showing step execution & failure states.</li>
-        <li><b>Service Trace Matrix:</b> Execution step log annotated with Operation IDs (<code>OP_ID: 3afcc79d</code>).</li>
-        <li><b>Live Event Stream:</b> Real-time event log with instant filtering by operation ID and event type.</li>
-      </ul>
-
-    </td>
-  </tr>
-
-</table>
+| 🗺️ **Geospatial Scoring & Constraints** | 🔄 **Saga Orchestration** |
+|---|---|
+| • **Composite Scoring:** Evaluates asset distance, transport time, battery level, workload, and priority.<br><br>• **Spatial Boundaries:** PostGIS `ST_Intersects` and bounding-box queries for restricted zones.<br><br>• **Geodesic Distance:** Haversine formula routing for remote outpost logistics. | • **Forward Execution:** 4-stage pipeline (`FUNDING` ➔ `RESOURCES` ➔ `TEAM` ➔ `PERMITS` ➔ `ACTIVE`).<br><br>• **Compensation Cascade:** Parallel rollback of locked grants, drones, and personnel on rejection.<br><br>• **Idempotency Claims:** Deduplication via `INSERT OR IGNORE INTO processed_events`. |
+| 📦 **Transactional Outbox** | 🔍 **System Observability** |
+| • **Atomic DB Writes:** Domain updates and outbox payloads committed in one transaction block.<br><br>• **At-Least-Once Delivery:** Worker process polls `PENDING` outbox rows and publishes to broker.<br><br>• **Crash Recovery:** Un-sent outbox events survive crashes and automatically replay on restart. | • **Saga Flow Visualizer:** 6-stage timeline renderer showing step execution & failure states.<br><br>• **Service Trace Matrix:** Execution step log annotated with Operation IDs (`OP_ID: 3afcc79d`).<br><br>• **Live Event Stream:** Real-time event log with instant filtering by operation ID and event type. |
 
 <br />
 
