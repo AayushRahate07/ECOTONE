@@ -364,6 +364,6 @@ ecotone/
 
 <div align="center">
 
-ECOTONE ATLAS • AAYUSH RAHATE
+• ECOTONE ATLAS • AAYUSH RAHATE •
 
 </div>
