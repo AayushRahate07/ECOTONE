@@ -383,6 +383,6 @@ ecotone/
 
 <div align="center">
 
-**ECOTONE Systems Engineering Team** • Open Source Software
+ECOTONE ATLAS • AAYUSH RAHATE
 
 </div>
