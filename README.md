@@ -1,10 +1,10 @@
 <div align="center">
 
-# 🌿 ECOTONE ATLAS 🗺️
+# ECOTONE ATLAS
 
 ### **Resilient Geospatial Operations • Spatial Resource Intelligence • Distributed Saga Engine**
 
-─────────────── 🍃 ───────────────
+──────────────────────────────
 
 [![Python Version](https://img.shields.io/badge/Python-3.14+-3776AB?style=for-the-badge&logo=python&logoColor=FFD43B)](https://python.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16.4-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgresql.org)
